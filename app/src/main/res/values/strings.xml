@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Mini Theater</string>
+    <string name="search_movies_or_tv_shows">Search movies or TV shows</string>
+</resources>
