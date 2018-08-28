@@ -5,13 +5,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".view.SearchActivity"
-    android:gravity="center">
+    android:gravity="top">
 
     <com.dailymotion.android.player.sdk.PlayerWebView
         android:id="@+id/player"
         android:layout_width="match_parent"
-        android:layout_height="215dp"
-        android:layout_centerInParent="true">
+        android:layout_height="215dp">
     </com.dailymotion.android.player.sdk.PlayerWebView>
 
 </RelativeLayout>

@@ -4,42 +4,52 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
+import android.view.WindowManager
 import android.widget.RelativeLayout
 import com.dailymotion.android.player.sdk.PlayerWebView
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.secret.Credentials
+import kotlinx.android.synthetic.main.activity_search.*
 
 class SearchActivity : AppCompatActivity() {
-
-    var player: PlayerWebView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_search)
 
-        supportActionBar!!.hide()
-
-        player = findViewById(R.id.player)
-        player?.load("x6k12so", Credentials.getPlayerParameters())
-        player?.setEventListener(playerEventListener)
+        player.setEventListener(playerEventListener)
+        player.setFullscreenButton(false)
+        player.load("x26hv6c", Credentials.getPlayerParameters())
     }
 
     override fun onConfigurationChanged(newConfig: Configuration?) {
-        val params: RelativeLayout.LayoutParams = player?.layoutParams as RelativeLayout.LayoutParams
+        super.onConfigurationChanged(newConfig)
+        orientationChanged()
+    }
+
+    private fun orientationChanged() {
+        val params: RelativeLayout.LayoutParams = player.layoutParams as RelativeLayout.LayoutParams
         params.width = RelativeLayout.LayoutParams.MATCH_PARENT
         params.height = RelativeLayout.LayoutParams.MATCH_PARENT
         if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
             params.height = 215 * resources.displayMetrics.density.toInt()
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            player.setFullscreenButton(false)
+        } else {
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            player.setFullscreenButton(true)
         }
-        player?.layoutParams = params
-        super.onConfigurationChanged(newConfig)
+        player.layoutParams = params
     }
 
     private fun toggleFullScreenMode() {
-        requestedOrientation = if(requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        else
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        requestedOrientation = if(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        }
+        orientationChanged()
     }
 
     private val playerEventListener: PlayerWebView.EventListener = PlayerWebView.EventListener {
