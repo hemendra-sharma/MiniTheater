@@ -6,5 +6,6 @@
     <color name="navigationBarColor">#f0f0f0</color>
     <color name="navigationBarColorDark">#cccccc</color>
 
-    <color name="textColor">#303030</color>
+    <color name="textColorLightBackground">#303030</color>
+    <color name="textColorDarkBackground">#ffffff</color>
 </resources>

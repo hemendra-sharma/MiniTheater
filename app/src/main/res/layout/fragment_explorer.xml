@@ -30,4 +30,34 @@
 
     </android.support.v7.widget.RecyclerView>
 
+    <RelativeLayout
+        android:id="@+id/rlProgress"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#ffffff"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="10dp"
+        android:focusableInTouchMode="true"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/pbProgress"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_centerInParent="true"/>
+
+        <TextView
+            android:id="@+id/tvProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/pbProgress"
+            android:textSize="@dimen/textSize16"
+            android:textColor="@color/textColorLightBackground"
+            android:gravity="center"
+            android:padding="5dp"
+            android:text="@string/please_wait"/>
+
+    </RelativeLayout>
+
 </android.support.design.widget.CoordinatorLayout>

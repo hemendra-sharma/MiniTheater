@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.widget.TextView
 import com.hemendra.minitheater.R
 
+@Deprecated("need to delete") // TODO: Must delete this class
 class TypefacedTextView(context: Context,
                         attributeSet: AttributeSet? = null,
                         style: Int = 0):
@@ -13,8 +14,8 @@ class TypefacedTextView(context: Context,
 
     init {
         if(attributeSet != null) {
-            val a = context.obtainStyledAttributes(attributeSet, R.styleable.CustomTextView)
-            val fontName = a.getString(R.styleable.CustomTextView_fontTTF)
+            val a = context.obtainStyledAttributes(attributeSet, R.styleable.TypefacedTextView)
+            val fontName = a.getString(R.styleable.TypefacedTextView_fontTTF)
             a.recycle()
             fontName?.length?.let {
                 if(it > 0) {

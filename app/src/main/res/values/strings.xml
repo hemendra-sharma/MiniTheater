@@ -2,9 +2,11 @@
     <string name="app_name">Mini Theater</string>
     <string name="search_movies_or_tv_shows">Search movies or TV shows</string>
     <string name="activity_main">MainActivity</string>
-    <string name="home">Home</string>
-    <string name="favorites">Favorites</string>
     <string name="notifications">Notifications</string>
     <string name="app_logo">App Logo</string>
     <string name="search">Search</string>
+    <string name="advanced_search">Advanced Search</string>
+    <string name="explore">Explore</string>
+    <string name="downloads">Downloads</string>
+    <string name="please_wait">Please Wait</string>
 </resources>

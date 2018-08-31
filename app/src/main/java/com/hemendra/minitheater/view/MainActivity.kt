@@ -1,22 +1,17 @@
 package com.hemendra.minitheater.view
 
-import android.app.SearchManager
-import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.SearchView
 import android.support.v7.widget.Toolbar
 import android.view.Menu
 import android.widget.Toast
 import com.hemendra.minitheater.R
-import com.hemendra.minitheater.view.home.HomeFragment
+import com.hemendra.minitheater.view.explorer.ExplorerFragment
+import com.hemendra.minitheater.view.player.PlayerFragment
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
-
-    private var searchView: SearchView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,16 +19,19 @@ class MainActivity : AppCompatActivity() {
 
         navigation.setOnNavigationItemSelectedListener(navigationListener)
 
-        showHomeFragment()
+        showExplorerFragment()
     }
 
+    /**
+     * Take the action bar from fragment and attach it to this activity
+     */
     override fun setSupportActionBar(toolbar: Toolbar?) {
         super.setSupportActionBar(toolbar)
         invalidateOptionsMenu()
     }
 
     /**
-     * Add logo to action bar
+     * refresh the action bar
      * @param menu The menu to inflate
      * @return Return FALSE because we want to handle search-view implementation on
      * fragment itself.
@@ -43,6 +41,9 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    /**
+     * Add logo to action bar
+     */
     private fun setupActionBar() {
         supportActionBar?.setLogo(R.drawable.main_activity_logo)
         supportActionBar?.setDisplayUseLogoEnabled(true)
@@ -52,12 +53,12 @@ class MainActivity : AppCompatActivity() {
 
     private val navigationListener = BottomNavigationView.OnNavigationItemSelectedListener {
         item -> when (item.itemId) {
-            R.id.navigation_home -> {
-                Toast.makeText(this, R.string.home, Toast.LENGTH_SHORT).show()
+            R.id.navigation_explore -> {
+                Toast.makeText(this, R.string.explore, Toast.LENGTH_SHORT).show()
                 return@OnNavigationItemSelectedListener true
             }
-            R.id.navigation_favorites-> {
-                Toast.makeText(this, R.string.favorites, Toast.LENGTH_SHORT).show()
+            R.id.navigation_downloads-> {
+                Toast.makeText(this, R.string.downloads, Toast.LENGTH_SHORT).show()
                 return@OnNavigationItemSelectedListener true
             }
             R.id.navigation_notifications -> {
@@ -68,9 +69,23 @@ class MainActivity : AppCompatActivity() {
         false
     }
 
-    private fun showHomeFragment() {
+    override fun onBackPressed() {
+        if(supportFragmentManager.backStackEntryCount == 0) {
+            if(ExplorerFragment.instance.onBackPressed()) return
+        }
+        finish()
+    }
+
+    private fun showExplorerFragment() {
         val transaction = supportFragmentManager.beginTransaction()
-        transaction.add(R.id.place_holder, HomeFragment.getInstance())
+        transaction.add(R.id.place_holder, ExplorerFragment.instance)
+        transaction.commitAllowingStateLoss()
+    }
+
+    private fun showPlayerFragment() {
+        val transaction = supportFragmentManager.beginTransaction()
+        transaction.add(R.id.place_holder, PlayerFragment.getInstance())
+        transaction.addToBackStack("video")
         transaction.commitAllowingStateLoss()
     }
 }
