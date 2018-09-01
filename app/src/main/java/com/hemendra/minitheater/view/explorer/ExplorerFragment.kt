@@ -10,6 +10,7 @@ import android.view.*
 import android.widget.Toast
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
+import com.hemendra.minitheater.model.movies.MoviesDataSourceFailureReason
 import com.hemendra.minitheater.presenter.search.ISearchPresenter
 import com.hemendra.minitheater.presenter.search.SearchPresenter
 import kotlinx.android.synthetic.main.fragment_explorer.*
@@ -17,6 +18,7 @@ import kotlinx.android.synthetic.main.fragment_explorer.*
 class ExplorerFragment: Fragment(), IExplorerFragment {
 
     private val searchPresenter: ISearchPresenter = SearchPresenter(this)
+    private var lastSearched: String = ""
 
     companion object {
         var instance: ExplorerFragment = ExplorerFragment()
@@ -45,7 +47,8 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
             override fun onQueryTextSubmit(query: String): Boolean {
                 searchView.clearFocus()
-                searchPresenter.performSearch(query)
+                lastSearched = query
+                searchPresenter.performSearch(query, 1)
                 return false
             }
 
@@ -71,7 +74,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         (activity as AppCompatActivity).setSupportActionBar(toolbar)
-        searchPresenter.loadLandingPage()
+        searchPresenter.performSearch("", 1)
     }
 
     override fun onSearchStarted(message: String) {
@@ -81,15 +84,15 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     override fun onSearchResults(movies: ArrayList<Movie>) {
         // TODO("not implemented") // populate 'recycler' adapter and hide progress
         hideProgress()
-        activity ?: Toast.makeText(activity, movies.size.toString(), Toast.LENGTH_SHORT).show()
+        Toast.makeText(activity, movies.size.toString()+" movies loaded", Toast.LENGTH_SHORT).show()
     }
 
-    override fun onSearchFailed(reason: ExplorerFailureReason) {
+    override fun onSearchFailed(reason: MoviesDataSourceFailureReason) {
         when(reason) {
-            ExplorerFailureReason.ABORTED -> showError("Search Aborted !")
-            ExplorerFailureReason.NETWORK_TIMEOUT -> showError("Network Timeout!")
-            ExplorerFailureReason.NO_INTERNET_CONNECTION -> showError("No Internet Connection!")
-            ExplorerFailureReason.NO_SEARCH_RESULTS -> showError("No Search Results!")
+            MoviesDataSourceFailureReason.ABORTED -> showError("Search Aborted !")
+            MoviesDataSourceFailureReason.NETWORK_TIMEOUT -> showError("Network Timeout!")
+            MoviesDataSourceFailureReason.NO_INTERNET_CONNECTION -> showError("No Internet Connection!")
+            MoviesDataSourceFailureReason.NO_SEARCH_RESULTS -> showError("No Search Results!")
         }
     }
 

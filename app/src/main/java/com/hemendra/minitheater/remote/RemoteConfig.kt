@@ -28,6 +28,7 @@ class RemoteConfig private constructor() {
     private var allMoviesURL: String = ""
     private var allMoviesPageParameterName: String = ""
     private var allMoviesLimitParameterName: String = ""
+    private var allMoviesQueryParameterName: String = ""
 
     private var imageURL: String = ""
     private var imagePartToExclude: String = ""
@@ -45,6 +46,7 @@ class RemoteConfig private constructor() {
                         allMoviesURL = document["all_movies_url"] as String
                         allMoviesPageParameterName = document["all_movies_param_page"] as String
                         allMoviesLimitParameterName = document["all_movies_param_limit"] as String
+                        allMoviesQueryParameterName = document["all_movies_param_query"] as String
                     }
                     "get_image" -> {
                         imageURL = document["get_image_url"] as String
@@ -67,13 +69,18 @@ class RemoteConfig private constructor() {
         db.collection("urls").get().addOnCompleteListener(listener)
     }
 
-    fun getAllMoviesUrl(pageNumber: Int): String {
+    fun getSecurityHeaderKey(): String = headerParameterName
+
+    fun getSecurityHeaderValue(): String = headerParameterValue
+
+    fun getMovieSearchURL(query: String, pageNumber: Int): String {
         if(!isInitialized) throw(IllegalStateException("Initialization not completed yet !"))
 
         val sb = StringBuilder()
         sb.append(allMoviesURL)
         sb.append("?$allMoviesLimitParameterName=$resultsPerPage")
         sb.append("&$allMoviesPageParameterName=$pageNumber")
+        sb.append("&$allMoviesQueryParameterName=$query")
         return sb.toString()
     }
 

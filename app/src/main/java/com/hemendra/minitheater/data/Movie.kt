@@ -16,7 +16,7 @@ class Movie: Serializable {
     var title_long: String = ""
     var slug: String = ""
     var year: Int = 0
-    var rating: Int = 0
+    var rating: Double = 0.0
     var runtime: Int = 0
     var genres: ArrayList<String> = ArrayList()
     var summary: String = ""

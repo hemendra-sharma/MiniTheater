@@ -1,21 +1,34 @@
 package com.hemendra.minitheater.presenter.search
 
-import android.os.Handler
+import com.hemendra.minitheater.data.Movie
+import com.hemendra.minitheater.model.movies.IMoviesDataSource
+import com.hemendra.minitheater.model.movies.IMoviesDataSourceListener
+import com.hemendra.minitheater.model.movies.MoviesDataSource
+import com.hemendra.minitheater.model.movies.MoviesDataSourceFailureReason
 import com.hemendra.minitheater.view.explorer.IExplorerFragment
 
-class SearchPresenter(var explorer: IExplorerFragment): ISearchPresenter {
+class SearchPresenter(private var explorer: IExplorerFragment): ISearchPresenter, IMoviesDataSourceListener {
 
-    override fun loadLandingPage() {
-        // TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-        explorer.onSearchStarted("Loading... Please Wait!")
-        Handler().postDelayed({ explorer.onSearchResults(ArrayList()) }, 1000)
-    }
+    private val moviesDataSource: IMoviesDataSource = MoviesDataSource(this)
 
-    override fun performSearch(query: String) {
-        // TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun performSearch(query: String, pageNumber: Int) {
+        moviesDataSource.searchMovies(query, pageNumber)
+        if(query.isEmpty())
+            explorer.onSearchStarted("Loading... Please Wait!")
+        else
+            explorer.onSearchStarted("Searching '$query'")
     }
 
     override fun abort() {
-        // TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        moviesDataSource.abort()
+        explorer.onSearchFailed(MoviesDataSourceFailureReason.ABORTED)
+    }
+
+    override fun onResult(results: ArrayList<Movie>) {
+        explorer.onSearchResults(results)
+    }
+
+    override fun onFailure(reason: MoviesDataSourceFailureReason) {
+        explorer.onSearchFailed(reason)
     }
 }
