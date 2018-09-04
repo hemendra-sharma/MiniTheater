@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="5dp"
+    app:cardElevation="5dp"
+    app:cardCornerRadius="5dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp">
+
+        <ImageView
+            android:id="@+id/ivCover"
+            android:layout_width="80dp"
+            android:layout_height="120dp"
+            android:contentDescription="@string/movie_cover"
+            android:background="#eeeeee"/>
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/ivCover"
+            android:layout_toEndOf="@+id/ivCover"
+            android:layout_marginStart="10dp"
+            android:textSize="@dimen/textSize18"
+            android:textColor="@color/textColorLightBackground"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="@string/movie_title"/>
+
+        <ImageView
+            android:id="@+id/ivStar"
+            android:layout_width="25dp"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/tvTitle"
+            android:layout_toEndOf="@+id/ivCover"
+            android:contentDescription="@string/star"
+            android:layout_alignTop="@+id/tvRating"
+            android:layout_alignBottom="@id/tvRating"
+            android:layout_marginStart="10dp"
+            android:src="@drawable/ic_star_filled_24dp"/>
+
+        <TextView
+            android:id="@+id/tvRating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/tvTitle"
+            android:layout_toEndOf="@+id/ivStar"
+            android:textSize="@dimen/textSize14"
+            android:textColor="#fda101"
+            android:maxLines="1"
+            android:text="@string/_0_10"/>
+
+        <TextView
+            android:id="@+id/tvYear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_below="@+id/tvTitle"
+            android:textSize="@dimen/textSize14"
+            android:textColor="#00aa00"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:minLines="1"
+            android:text="@string/_2018"/>
+
+        <TextView
+            android:id="@+id/tvDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@+id/ivCover"
+            android:layout_below="@+id/tvRating"
+            android:layout_marginStart="10dp"
+            android:textSize="@dimen/textSize16"
+            android:textColor="@color/textColorLightBackground"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:gravity="center_vertical"/>
+
+        <ProgressBar
+            android:id="@+id/pb"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_centerHorizontal="true"
+            android:visibility="gone"/>
+
+    </RelativeLayout>
+
+</android.support.v7.widget.CardView>

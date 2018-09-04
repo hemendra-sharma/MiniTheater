@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Mini Theater</string>
-    <string name="search_movies_or_tv_shows">Search movies or TV shows</string>
-    <string name="activity_main">MainActivity</string>
     <string name="notifications">Notifications</string>
     <string name="app_logo">App Logo</string>
     <string name="search">Search</string>
@@ -9,4 +7,25 @@
     <string name="explore">Explore</string>
     <string name="downloads">Downloads</string>
     <string name="please_wait">Please Wait</string>
+    <string name="movie_cover">Movie Cover</string>
+    <string name="star">Star</string>
+    <string name="_0_10">0/10</string>
+    <string name="movie_title">Movie Title</string>
+    <string name="movie_description">Movie Description…</string>
+    <string name="_120_min">120 min.</string>
+    <string name="_2018">2018</string>
+    <string name="_720p">720p</string>
+    <string name="_108_seeds">108 Seeds</string>
+    <string name="_55_peers">55 Peers</string>
+    <string name="_2_5_gb">2.5 GB</string>
+    <string name="pg_13">PG-13</string>
+    <string name="english">English</string>
+    <string name="watch_trailer">Watch\nTrailer</string>
+    <string name="action_adventure_sci_fi">Action, Adventure, Sci-fi…</string>
+    <string name="play">Play</string>
+    <string name="permission_request_rationale">The app requires permission to save files locally,
+        and play videos. Please allow the app permission.</string>
+    <string name="permission_request_from_app_settings">The app requires permission to save
+        temporary cached data. Please go to application settings and allow all permissions.</string>
+    <string name="no_downloads">No Downloads</string>
 </resources>

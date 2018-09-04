@@ -3,7 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/colorPrimary">
 
     <android.support.design.widget.AppBarLayout
         android:id="@+id/appBarLayout"
@@ -16,7 +17,8 @@
             android:layout_height="?android:attr/actionBarSize"
             android:layout_alignParentTop="true"
             android:background="@color/colorPrimary"
-            app:popupTheme="@style/AppTheme.PopupOverlay"/>
+            app:popupTheme="@style/AppTheme.PopupOverlay"
+            app:layout_scrollFlags="scroll|enterAlways"/>
 
     </android.support.design.widget.AppBarLayout>
 
@@ -38,6 +40,7 @@
         android:clickable="true"
         android:focusable="true"
         android:elevation="10dp"
+        android:gravity="center"
         android:focusableInTouchMode="true"
         android:visibility="gone">
 

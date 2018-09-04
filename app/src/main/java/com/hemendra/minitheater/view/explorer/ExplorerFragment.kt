@@ -3,26 +3,30 @@ package com.hemendra.minitheater.view.explorer
 import android.app.SearchManager
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
 import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.SearchView
 import android.view.*
 import android.widget.Toast
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
-import com.hemendra.minitheater.model.movies.MoviesDataSourceFailureReason
-import com.hemendra.minitheater.presenter.search.ISearchPresenter
-import com.hemendra.minitheater.presenter.search.SearchPresenter
+import com.hemendra.minitheater.data.model.movies.MoviesDataSourceFailureReason
+import com.hemendra.minitheater.presenter.ImagesPresenter
+import com.hemendra.minitheater.presenter.listeners.ISearchPresenter
+import com.hemendra.minitheater.presenter.SearchPresenter
+import com.hemendra.minitheater.view.listeners.IExplorerFragment
+import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import kotlinx.android.synthetic.main.fragment_explorer.*
 
 class ExplorerFragment: Fragment(), IExplorerFragment {
 
     private val searchPresenter: ISearchPresenter = SearchPresenter(this)
-    private var lastSearched: String = ""
-
-    companion object {
-        var instance: ExplorerFragment = ExplorerFragment()
-    }
+    private var lastSearched = ""
+    private var lastPageNumber = 1
+    private var adapter: MoviesListAdapter? = null
+    lateinit var onMovieItemClickListener: OnMovieItemClickListener
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setHasOptionsMenu(true)
@@ -40,7 +44,8 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
         // Associate searchable configuration with the SearchView
         val searchManager = context?.getSystemService(Context.SEARCH_SERVICE) as SearchManager
-        val searchView: SearchView = menu.findItem(R.id.action_search).actionView as SearchView
+        val searchMenuItem = menu.findItem(R.id.action_search)
+        val searchView: SearchView = searchMenuItem.actionView as SearchView
         val settingsItem = menu.findItem(R.id.action_settings)
         searchView.setSearchableInfo(searchManager.getSearchableInfo(activity?.componentName))
 
@@ -48,12 +53,21 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             override fun onQueryTextSubmit(query: String): Boolean {
                 searchView.clearFocus()
                 lastSearched = query
-                searchPresenter.performSearch(query, 1)
+                lastPageNumber = 1
+                searchPresenter.performSearch(query, lastPageNumber)
                 return false
             }
 
-            override fun onQueryTextChange(query: String): Boolean {
-                return false
+            override fun onQueryTextChange(query: String): Boolean  = false
+        })
+
+        searchMenuItem.setOnActionExpandListener(object: MenuItem.OnActionExpandListener{
+            override fun onMenuItemActionExpand(item: MenuItem?): Boolean = true
+            override fun onMenuItemActionCollapse(item: MenuItem?): Boolean {
+                lastSearched = ""
+                lastPageNumber = 1
+                searchPresenter.performSearch("", lastPageNumber)
+                return true
             }
 
         })
@@ -74,30 +88,76 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         (activity as AppCompatActivity).setSupportActionBar(toolbar)
-        searchPresenter.performSearch("", 1)
+        lastSearched = ""
+        lastPageNumber = 1
+        recycler.addOnScrollListener(object :
+                ContinuousScrollListener(recycler.layoutManager as LinearLayoutManager) {
+            override fun onLoadMore() {
+                if(!searchPresenter.isSearching()) {
+                    lastPageNumber++
+                    searchPresenter.performSearch(lastSearched, lastPageNumber)
+                }
+            }
+        })
+        searchPresenter.performSearch(lastSearched, lastPageNumber)
     }
 
+    override fun onDestroyView() {
+        searchPresenter.abort()
+        context?.let { ImagesPresenter.getInstance(it).abortAll() }
+        super.onDestroyView()
+    }
+
+    override fun getCtx(): Context? = context
+
     override fun onSearchStarted(message: String) {
-        showProgress(message)
+        if(lastPageNumber == 1)
+            showProgress(message)
     }
 
     override fun onSearchResults(movies: ArrayList<Movie>) {
-        // TODO("not implemented") // populate 'recycler' adapter and hide progress
         hideProgress()
-        Toast.makeText(activity, movies.size.toString()+" movies loaded", Toast.LENGTH_SHORT).show()
+        if(lastPageNumber == 1) {
+            adapter = MoviesListAdapter(movies, onMovieItemClickListener)
+            recycler.adapter = adapter
+            Handler().postDelayed({ checkLoadMore() }, 1000)
+        } else {
+            adapter?.appendData(movies)
+        }
     }
 
     override fun onSearchFailed(reason: MoviesDataSourceFailureReason) {
         when(reason) {
-            MoviesDataSourceFailureReason.ABORTED -> showError("Search Aborted !")
+            MoviesDataSourceFailureReason.ABORTED -> { /** ignore **/ }
             MoviesDataSourceFailureReason.NETWORK_TIMEOUT -> showError("Network Timeout!")
             MoviesDataSourceFailureReason.NO_INTERNET_CONNECTION -> showError("No Internet Connection!")
-            MoviesDataSourceFailureReason.NO_SEARCH_RESULTS -> showError("No Search Results!")
+            MoviesDataSourceFailureReason.NO_SEARCH_RESULTS -> {
+                adapter?.endReached()
+                if(lastPageNumber == 1) showError("No Search Results!")
+            }
+            MoviesDataSourceFailureReason.ALREADY_LOADING -> {
+                if(lastPageNumber > 1) lastPageNumber--
+            }
+            MoviesDataSourceFailureReason.API_MISSING -> showError("Something Wrong on Server!")
+            MoviesDataSourceFailureReason.UNKNOWN -> showError("Unknown Error!")
+        }
+    }
+
+    private fun checkLoadMore() {
+        val mLayoutManager = recycler.layoutManager as LinearLayoutManager
+        val visibleItemCount = mLayoutManager.childCount
+        val totalItemCount = mLayoutManager.itemCount
+        val pastVisibleItemsCount = mLayoutManager.findFirstVisibleItemPosition()
+
+        if ((visibleItemCount + pastVisibleItemsCount) >= totalItemCount) {
+            lastPageNumber = 2
+            searchPresenter.performSearch(lastSearched, lastPageNumber)
         }
     }
 
     fun onBackPressed(): Boolean {
         return if(isProgressOrErrorVisible()) {
+            searchPresenter.abort()
             hideProgress()
             true
         } else false
