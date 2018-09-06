@@ -28,4 +28,10 @@
     <string name="permission_request_from_app_settings">The app requires permission to save
         temporary cached data. Please go to application settings and allow all permissions.</string>
     <string name="no_downloads">No Downloads</string>
+    <string name="downloading_0">Downloading… 0%</string>
+    <string name="stop_download">Stop Download</string>
+    <string name="pause">Pause</string>
+    <string name="downloaded_0">Downloaded: 0%</string>
+    <string name="_0_kb_s">0 KB/s</string>
+    <string name="quality_720p">Quality: 720p</string>
 </resources>

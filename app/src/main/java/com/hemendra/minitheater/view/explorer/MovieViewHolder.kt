@@ -1,6 +1,7 @@
 package com.hemendra.minitheater.view.explorer
 
 import android.graphics.Bitmap
+import android.support.v7.widget.CardView
 import android.support.v7.widget.RecyclerView
 import android.view.View
 import android.widget.ImageView
@@ -17,6 +18,7 @@ class MovieViewHolder(view: View, private val listener: OnMovieItemClickListener
                       private val imagesPresenter: ImagesPresenter):
         RecyclerView.ViewHolder(view), ImageLoaderCallback {
 
+    private val card: CardView = view as CardView
     private val ivCover: ImageView = view.findViewById(R.id.ivCover)
     private val tvTitle: TextView = view.findViewById(R.id.tvTitle)
     private val ivStar: ImageView = view.findViewById(R.id.ivStar)
@@ -54,6 +56,7 @@ class MovieViewHolder(view: View, private val listener: OnMovieItemClickListener
         tvRating.visibility = View.GONE
         tvYear.visibility = View.GONE
         tvDescription.visibility = View.GONE
+        card.cardElevation = 0f
     }
 
     private fun hideProgress() {
@@ -64,6 +67,7 @@ class MovieViewHolder(view: View, private val listener: OnMovieItemClickListener
         tvRating.visibility = View.VISIBLE
         tvYear.visibility = View.VISIBLE
         tvDescription.visibility = View.VISIBLE
+        card.cardElevation = 5f
     }
 
     override fun onImageLoaded(url: String, image: Bitmap) {

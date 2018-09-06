@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rlContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="10dp"
+    android:gravity="center_vertical"
+    style="@android:style/TextAppearance.Material.Notification">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        style="@android:style/TextAppearance.Material.Notification.Title"
+        android:text="@string/movie_title"
+        android:textStyle="bold"
+        android:ellipsize="end"/>
+
+    <TextView
+        android:id="@+id/tvInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        style="@android:style/TextAppearance.Material.Notification.Info"
+        android:text="@string/downloading_0"
+        android:layout_below="@+id/tvTitle"/>
+
+</RelativeLayout>

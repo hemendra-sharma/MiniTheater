@@ -3,6 +3,8 @@ package com.hemendra.minitheater.utils
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
+import com.hemendra.minitheater.data.Movie
+import com.hemendra.minitheater.data.Torrent
 import java.net.URLEncoder
 
 class RemoteConfig private constructor() {
@@ -39,6 +41,10 @@ class RemoteConfig private constructor() {
     private var torrentURL: String = ""
     private var torrentStringToReplace = ""
 
+    private var magnetURL: String = ""
+    private var magnetReplaceHash: String = ""
+    private var magnetReplaceMovieName: String = ""
+
     private var listener: OnCompleteListener<QuerySnapshot> = OnCompleteListener {
         if(it.isSuccessful) {
             for(document in it.result) {
@@ -62,6 +68,11 @@ class RemoteConfig private constructor() {
                     "get_torrent" -> {
                         torrentURL = document["url"] as String
                         torrentStringToReplace = document["string_to_replace"] as String
+                    }
+                    "magnet" -> {
+                        magnetURL = document["magnet_url"] as String
+                        magnetReplaceHash = document["hash_replace"] as String
+                        magnetReplaceMovieName = document["movie_name_replace"] as String
                     }
                 }
             }
@@ -102,6 +113,24 @@ class RemoteConfig private constructor() {
 
         val path = url.replace(imagePartToExclude, "")
         return imageURL.replace(imageStringToReplace, path)
+    }
+
+    fun getTorrentURL(torrent: Torrent): String {
+        if(!isInitialized) throw(IllegalStateException("Initialization not completed yet !"))
+
+        return torrentURL.replace(torrentStringToReplace, torrent.hash)
+    }
+
+    fun getMagnetURL(movie: Movie): String {
+        if(!isInitialized) throw(IllegalStateException("Initialization not completed yet !"))
+
+        assert(movie.torrents.size == 1)
+
+        val torrentHash = movie.torrents[0].hash
+        val movieName = URLEncoder.encode(movie.title, "UTF-8")
+
+        return magnetURL.replace(magnetReplaceHash, torrentHash)
+                .replace(magnetReplaceMovieName, movieName)
     }
 
 }

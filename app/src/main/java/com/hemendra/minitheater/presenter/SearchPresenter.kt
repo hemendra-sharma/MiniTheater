@@ -12,10 +12,13 @@ import com.hemendra.minitheater.view.listeners.IExplorerFragment
 class SearchPresenter(private var explorer: IExplorerFragment):
         ISearchPresenter, IMoviesDataSourceListener {
 
+    private var destroyed = false
     private val moviesDataSource: IMoviesDataSource = MoviesDataSource(this)
 
     override fun performSearch(query: String, pageNumber: Int) {
         abort() // abort any previous ongoing process
+        if(destroyed) return
+
         val ctx = explorer.getCtx()
         if(ctx != null && !Utils.isNetworkAvailable(ctx)) {
             explorer.onSearchFailed(MoviesDataSourceFailureReason.NO_INTERNET_CONNECTION)
@@ -28,17 +31,23 @@ class SearchPresenter(private var explorer: IExplorerFragment):
             explorer.onSearchStarted("Searching '$query'")
     }
 
-    override fun isSearching() : Boolean = moviesDataSource.isSearching()
+    override fun isSearching() : Boolean = !destroyed && moviesDataSource.isSearching()
 
     override fun abort() {
-        if(moviesDataSource.abort()) explorer.onSearchFailed(MoviesDataSourceFailureReason.ABORTED)
+        if(!destroyed && moviesDataSource.abort())
+            explorer.onSearchFailed(MoviesDataSourceFailureReason.ABORTED)
+    }
+
+    override fun destroy() {
+        abort()
+        destroyed = true
     }
 
     override fun onResult(results: ArrayList<Movie>) {
-        explorer.onSearchResults(results)
+        if(!destroyed) explorer.onSearchResults(results)
     }
 
     override fun onFailure(reason: MoviesDataSourceFailureReason) {
-        explorer.onSearchFailed(reason)
+        if(!destroyed) explorer.onSearchFailed(reason)
     }
 }

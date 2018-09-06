@@ -103,7 +103,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     }
 
     override fun onDestroyView() {
-        searchPresenter.abort()
+        searchPresenter.destroy()
         context?.let { ImagesPresenter.getInstance(it).abortAll() }
         super.onDestroyView()
     }

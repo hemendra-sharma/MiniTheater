@@ -1,6 +1,8 @@
 package com.hemendra.minitheater.view
 
+import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
@@ -9,6 +11,7 @@ import android.view.View
 import android.widget.Toast
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
+import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.utils.RemoteConfig
 import com.hemendra.minitheater.view.downloader.DownloaderFragment
 import com.hemendra.minitheater.view.explorer.ExplorerFragment
@@ -25,6 +28,8 @@ class MainActivity : AppCompatActivity() {
     private val DETAILS_FRAGMENT_TAG = "details"
     private val DOWNLOADS_FRAGMENT_TAG = "downloads"
 
+    private var movieToAddToDownloads: Movie? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -32,6 +37,12 @@ class MainActivity : AppCompatActivity() {
         explorerFragment.onMovieItemClickListener = onMovieItemClickListener
 
         if(runtimePermissionManager.askForPermissions()) beginConfig()
+    }
+
+    override fun onNewIntent(i: Intent?) {
+        super.onNewIntent(i)
+        if(intent.getBooleanExtra("from_downloading_notification", false))
+            navigation.selectedItemId = R.id.navigation_downloads
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -55,6 +66,8 @@ class MainActivity : AppCompatActivity() {
         rlLogo.visibility = View.GONE
         navigation.setOnNavigationItemSelectedListener(navigationListener)
         showExplorerFragment()
+        if(intent.getBooleanExtra("from_downloading_notification", false))
+            navigation.selectedItemId = R.id.navigation_downloads
     }
 
     /**
@@ -89,29 +102,35 @@ class MainActivity : AppCompatActivity() {
     private val navigationListener = BottomNavigationView.OnNavigationItemSelectedListener {
         item -> when (item.itemId) {
             R.id.navigation_explore -> {
-                while(supportFragmentManager.backStackEntryCount > 0) {
-                    supportFragmentManager.popBackStackImmediate()
-                }
-                for(fragment in supportFragmentManager.fragments) {
-                    if(fragment !is ExplorerFragment) {
-                        supportFragmentManager
-                                .beginTransaction()
-                                .remove(fragment)
-                                .commitAllowingStateLoss()
+                var tag = currentFragmentTag()
+                if(tag == DETAILS_FRAGMENT_TAG) {
+                    while (supportFragmentManager.backStackEntryCount > 0) {
+                        supportFragmentManager.popBackStackImmediate()
+                    }
+                } else {
+                    while (supportFragmentManager.backStackEntryCount > 0
+                            && tag != DETAILS_FRAGMENT_TAG) {
+                        supportFragmentManager.popBackStackImmediate()
+                        tag = currentFragmentTag()
                     }
                 }
                 return@OnNavigationItemSelectedListener true
             }
             R.id.navigation_downloads-> {
-                showDownloaderFragment()
-                return@OnNavigationItemSelectedListener true
-            }
-            R.id.navigation_notifications -> {
-                Toast.makeText(this, R.string.notifications, Toast.LENGTH_SHORT).show()
+                if(getSelectedNavigationItem() != R.id.navigation_downloads)
+                    showDownloaderFragment()
                 return@OnNavigationItemSelectedListener true
             }
         }
         false
+    }
+
+    private fun currentFragmentTag(): String {
+        if(supportFragmentManager.backStackEntryCount == 0) return ""
+
+        val entry = supportFragmentManager
+                .getBackStackEntryAt(supportFragmentManager.backStackEntryCount-1)
+        return entry.name ?: ""
     }
 
     override fun onBackPressed() {
@@ -119,16 +138,37 @@ class MainActivity : AppCompatActivity() {
             if(explorerFragment.onBackPressed()) return
         } else if(supportFragmentManager.backStackEntryCount > 0) {
             supportFragmentManager.popBackStackImmediate()
-            val entry = supportFragmentManager
-                    .getBackStackEntryAt(supportFragmentManager.backStackEntryCount-1)
-            if(entry.name == DETAILS_FRAGMENT_TAG) {
-                navigation.selectedItemId = R.id.navigation_explore
-            } else if(entry.name == DOWNLOADS_FRAGMENT_TAG) {
-                navigation.selectedItemId = R.id.navigation_downloads
-            }
+            resetNavigationSelection()
             return
         }
         finish()
+    }
+
+    private fun resetNavigationSelection() {
+        val current = currentFragmentTag()
+        if(current == DETAILS_FRAGMENT_TAG
+                || supportFragmentManager.backStackEntryCount == 0) {
+            selectNavigationItem(R.id.navigation_explore)
+        } else if(current == DOWNLOADS_FRAGMENT_TAG) {
+            selectNavigationItem(R.id.navigation_downloads)
+        }
+    }
+
+    private fun selectNavigationItem(actionId: Int) {
+        val size = navigation.menu.size()
+        for(i in 0 until size) {
+            val item = navigation.menu.getItem(i)
+            if(actionId == item.itemId) item.isChecked = true
+        }
+    }
+
+    private fun getSelectedNavigationItem(): Int {
+        val size = navigation.menu.size()
+        for(i in 0 until size) {
+            val item = navigation.menu.getItem(i)
+            if(item.isChecked) return item.itemId
+        }
+        return 0
     }
 
     private val onMovieItemClickListener = object: OnMovieItemClickListener {
@@ -146,6 +186,7 @@ class MainActivity : AppCompatActivity() {
     private val onMovieDownloadClickListener = object: OnMovieDownloadClickListener {
 
         override fun onDownloadClicked(movie: Movie) {
+            movieToAddToDownloads = movie
             navigation.selectedItemId = R.id.navigation_downloads
         }
 
@@ -168,6 +209,10 @@ class MainActivity : AppCompatActivity() {
     private fun showDownloaderFragment() {
         val transaction = supportFragmentManager.beginTransaction()
         val downloaderFragment = DownloaderFragment()
+        movieToAddToDownloads?.let {
+            downloaderFragment.setMovieToAdd(it)
+            movieToAddToDownloads = null
+        }
         transaction.add(R.id.place_holder, downloaderFragment)
         transaction.addToBackStack(DOWNLOADS_FRAGMENT_TAG)
         transaction.commitAllowingStateLoss()

@@ -34,8 +34,8 @@ dependencies {
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
     implementation 'com.android.support:design:28.0.0-alpha3'
 
-    // https://mvnrepository.com/artifact/com.github.sv244/torrentstream-android
-    implementation group: 'com.github.sv244', name: 'torrentstream-android', version: '1.1.1'
+    // https://github.com/masterwok/simple-torrent-android
+    implementation 'com.github.masterwok:simple-torrent-android:0.5.0'
 
     // recycler and card view
     implementation 'com.android.support:recyclerview-v7:28.0.0-alpha3'
