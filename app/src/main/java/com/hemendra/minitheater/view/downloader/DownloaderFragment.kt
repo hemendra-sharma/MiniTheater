@@ -15,6 +15,7 @@ import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.presenter.DownloadFailureReason
 import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.view.listeners.OnDownloadItemClickListener
+import com.hemendra.minitheater.view.listeners.OnMovieDownloadClickListener
 import com.hemendra.minitheater.view.showMessage
 import com.hemendra.minitheater.view.showYesNoMessage
 import kotlinx.android.synthetic.main.fragment_downloader.*
@@ -28,6 +29,11 @@ class DownloaderFragment: Fragment() {
     private var movieToAdd: Movie? = null
     fun setMovieToAdd(movie: Movie) {
         movieToAdd = movie
+    }
+
+    private var onMovieDownloadClickListener: OnMovieDownloadClickListener? = null
+    fun setMovieClickListener(onMovieDownloadClickListener: OnMovieDownloadClickListener) {
+        this.onMovieDownloadClickListener = onMovieDownloadClickListener
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -92,14 +98,20 @@ class DownloaderFragment: Fragment() {
 
         override fun onItemClicked(movie: Movie) {
             // play movie in video player
+
             val file = downloadsPresenter.getTorrentFile(movie.torrents[0])
             if(file != null) {
                 context?.let {
-                    val intent = Intent(Intent.ACTION_VIEW)
+                    /*val intent = Intent(Intent.ACTION_VIEW)
                     val uri = FileProvider.getUriForFile(it, it.packageName + ".provider", file)
                     intent.setDataAndType(uri, "video/mp4")
                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    startActivity(intent)
+                    startActivity(intent)*/
+                    onMovieDownloadClickListener?.onPlayClicked(movie)
+                }
+            } else {
+                context?.let {
+                    showMessage(it, "No Data to Play! Please Download at Least Few MBs to Play")
                 }
             }
         }
@@ -124,7 +136,8 @@ class DownloaderFragment: Fragment() {
                 if(movie.isDownloading) {
                     showMessage(it, "Cannot remove an ongoing download. Stop the download first.")
                 } else {
-                    val msg = """Are you sure you want to remove "${movie.title}" from downloads?"""
+                    val msg = """The downloaded movie data will be deleted.
+                        |Are you sure you want to delete the movie "${movie.title}"?""".trimMargin()
                     showYesNoMessage(it, msg, Runnable {
                         downloadsPresenter.pauseDownload(it, movie)
                         downloadsPresenter.removeDownload(movie)

@@ -127,7 +127,7 @@ class Utils {
          * @param file target File
          * @return TRUE if deleted successfully, FALSE otherwise.
          */
-        private fun deleteFile(file: File): Boolean {
+        public fun deleteFile(file: File): Boolean {
             return file.exists() && file.delete()
         }
 
@@ -136,7 +136,7 @@ class Utils {
          * @param dir target directory
          * @return TRUE if deleted successfully, FALSE otherwise.
          */
-        private fun deleteDirectory(dir: File): Boolean {
+        public fun deleteDirectory(dir: File): Boolean {
             var success = true
             if (dir.exists()) {
                 val files = dir.listFiles()

@@ -46,7 +46,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         val searchManager = context?.getSystemService(Context.SEARCH_SERVICE) as SearchManager
         val searchMenuItem = menu.findItem(R.id.action_search)
         val searchView: SearchView = searchMenuItem.actionView as SearchView
-        val settingsItem = menu.findItem(R.id.action_settings)
+        //val settingsItem = menu.findItem(R.id.action_settings)
         searchView.setSearchableInfo(searchManager.getSearchableInfo(activity?.componentName))
 
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
@@ -64,21 +64,23 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         searchMenuItem.setOnActionExpandListener(object: MenuItem.OnActionExpandListener{
             override fun onMenuItemActionExpand(item: MenuItem?): Boolean = true
             override fun onMenuItemActionCollapse(item: MenuItem?): Boolean {
-                lastSearched = ""
-                lastPageNumber = 1
-                searchPresenter.performSearch("", lastPageNumber)
+                if(lastSearched.isNotEmpty()) {
+                    lastSearched = ""
+                    lastPageNumber = 1
+                    searchPresenter.performSearch("", lastPageNumber)
+                }
                 return true
             }
 
         })
 
-        searchView.setOnQueryTextFocusChangeListener {
+        /*searchView.setOnQueryTextFocusChangeListener {
             _, hasFocus -> settingsItem.isVisible = hasFocus }
 
         settingsItem.setOnMenuItemClickListener {
             Toast.makeText(activity, "1", Toast.LENGTH_SHORT).show()
             true
-        }
+        }*/
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,

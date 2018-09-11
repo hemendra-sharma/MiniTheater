@@ -37,6 +37,12 @@ dependencies {
     // https://github.com/masterwok/simple-torrent-android
     implementation 'com.github.masterwok:simple-torrent-android:0.5.0'
 
+    // https://github.com/halilozercan/BetterVideoPlayer
+    implementation 'com.github.halilozercan:BetterVideoPlayer:1.2.alpha1'
+
+    // https://github.com/ybq/Android-SpinKit
+    implementation 'com.github.ybq:Android-SpinKit:1.1.0'
+
     // recycler and card view
     implementation 'com.android.support:recyclerview-v7:28.0.0-alpha3'
     implementation 'com.android.support:cardview-v7:28.0.0-alpha3'

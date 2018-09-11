@@ -61,6 +61,11 @@ class DownloadsPresenter private constructor():
     override fun removeDownload(movie: Movie): Boolean {
         if(downloadsList?.remove(movie) == true) {
             saveState()
+            val dir = File(dir.absolutePath+"/"+movie.torrents[0].hash)
+            if(dir.exists()) {
+                if(dir.isFile) Utils.deleteFile(dir)
+                else if(dir.isDirectory) Utils.deleteDirectory(dir)
+            }
             return true
         }
         return false
@@ -108,9 +113,11 @@ class DownloadsPresenter private constructor():
     override fun getTorrentFile(torrent: Torrent): File? {
         val dir = File(dir.absolutePath+"/"+torrent.hash)
         val subDirs = dir.listFiles()
-        if(subDirs.isNotEmpty() && subDirs[0].isDirectory) {
+        if(subDirs != null
+                && subDirs.isNotEmpty() && subDirs[0].isDirectory) {
             val files = subDirs[0].listFiles()
-            if(files.isNotEmpty() && files[0].isFile)
+            if(files != null
+                    && files.isNotEmpty() && files[0].isFile)
                 return files[0]
         }
         return null

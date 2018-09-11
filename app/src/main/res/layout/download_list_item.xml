@@ -20,6 +20,27 @@
             android:contentDescription="@string/movie_cover"
             android:background="#eeeeee"/>
 
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/ivCover"
+            android:layout_alignBottom="@+id/ivCover"
+            android:layout_alignStart="@+id/ivCover"
+            android:layout_alignEnd="@+id/ivCover"
+            android:focusableInTouchMode="false"
+            android:focusable="false"
+            android:clickable="false">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_centerInParent="true"
+                android:contentDescription="@string/play"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_play_arrow_white_40dp"/>
+
+        </RelativeLayout>
+
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="match_parent"

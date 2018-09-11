@@ -2,22 +2,20 @@ package com.hemendra.minitheater.view
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
 import android.view.Menu
 import android.view.View
-import android.widget.Toast
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
-import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.utils.RemoteConfig
 import com.hemendra.minitheater.view.downloader.DownloaderFragment
 import com.hemendra.minitheater.view.explorer.ExplorerFragment
 import com.hemendra.minitheater.view.listeners.OnMovieDownloadClickListener
 import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import com.hemendra.minitheater.view.explorer.DetailsFragment
+import com.hemendra.minitheater.view.player.PlayerActivity
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -27,6 +25,7 @@ class MainActivity : AppCompatActivity() {
 
     private val DETAILS_FRAGMENT_TAG = "details"
     private val DOWNLOADS_FRAGMENT_TAG = "downloads"
+    private val PLAYER_FRAGMENT_TAG = "player"
 
     private var movieToAddToDownloads: Movie? = null
 
@@ -191,7 +190,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onPlayClicked(movie: Movie) {
-
+            showPlayerActivity(movie)
         }
 
     }
@@ -213,9 +212,16 @@ class MainActivity : AppCompatActivity() {
             downloaderFragment.setMovieToAdd(it)
             movieToAddToDownloads = null
         }
+        downloaderFragment.setMovieClickListener(onMovieDownloadClickListener)
         transaction.add(R.id.place_holder, downloaderFragment)
         transaction.addToBackStack(DOWNLOADS_FRAGMENT_TAG)
         transaction.commitAllowingStateLoss()
+    }
+
+    private fun showPlayerActivity(movie: Movie) {
+        val intent = Intent(applicationContext, PlayerActivity::class.java)
+        intent.putExtra("movie", movie)
+        startActivity(intent)
     }
 
 }
