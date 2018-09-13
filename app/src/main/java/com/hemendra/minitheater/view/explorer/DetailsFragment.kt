@@ -18,7 +18,10 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import com.hemendra.minitheater.data.Torrent
+import com.hemendra.minitheater.presenter.DownloadFailureReason
+import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.view.listeners.OnMovieDownloadClickListener
+import com.hemendra.minitheater.view.showMessage
 
 
 class DetailsFragment: Fragment() {
@@ -142,7 +145,17 @@ class DetailsFragment: Fragment() {
             m.torrents.clear()
             view.tag?.let { t ->
                 m.torrents.add(t as Torrent)
-                onMovieDownloadClickListener?.onPlayClicked(m)
+                context?.let { ctx ->
+                    var ret = DownloadsPresenter.getInstance().addDownload(m)
+                    if(ret == DownloadFailureReason.NONE) {
+                        ret = DownloadsPresenter.getInstance().startDownload(ctx, m, true)
+                        if (ret == DownloadFailureReason.NONE)
+                            onMovieDownloadClickListener?.onPlayClicked(m)
+                        else
+                            showMessage(ctx, "Failed to Start Download ! Reason: $ret")
+                    } else
+                        showMessage(ctx, "Failed to Add Download ! Reason: $ret")
+                }
             }
         }
     }

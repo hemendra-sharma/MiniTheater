@@ -49,16 +49,32 @@ class DownloadsList: Serializable {
         return updated
     }
 
-    fun pauseDownload(movie: Movie): Boolean {
-        var paused = false
+    fun pauseOrResumeDownload(movie: Movie): Boolean {
+        var done = false
+        for(m in movies) {
+            if(m.id == movie.id) {
+                m.isDownloading = true
+                m.isPaused = !m.isPaused
+                movie.isDownloading = true
+                movie.isPaused = !movie.isPaused
+                done = true
+            }
+        }
+        return done
+    }
+
+    fun stopDownload(movie: Movie): Boolean {
+        var done = false
         for(m in movies) {
             if(m.id == movie.id) {
                 m.isDownloading = false
+                m.isPaused = false
                 movie.isDownloading = false
-                paused = true
+                movie.isPaused = false
+                done = true
             }
         }
-        return paused
+        return done
     }
 
 }

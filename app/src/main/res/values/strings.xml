@@ -34,4 +34,5 @@
     <string name="downloaded_0">Downloaded: 0%</string>
     <string name="_0_kb_s">0 KB/s</string>
     <string name="quality_720p">Quality: 720p</string>
+    <string name="subtitles">Subtitles</string>
 </resources>

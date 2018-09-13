@@ -190,6 +190,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onPlayClicked(movie: Movie) {
+            navigation.selectedItemId = R.id.navigation_downloads
             showPlayerActivity(movie)
         }
 

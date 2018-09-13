@@ -37,9 +37,18 @@
                 android:layout_centerInParent="true"
                 android:contentDescription="@string/play"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_play_arrow_white_40dp"/>
+                android:src="@drawable/ic_play_arrow_white_30dp"/>
 
         </RelativeLayout>
+
+        <ImageView
+            android:id="@+id/ivExternalVideo"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:contentDescription="@string/play"
+            android:src="@drawable/ic_airplay_black_30dp"/>
 
         <TextView
             android:id="@+id/tvTitle"
@@ -47,6 +56,7 @@
             android:layout_height="wrap_content"
             android:layout_alignTop="@+id/ivCover"
             android:layout_toEndOf="@+id/ivCover"
+            android:layout_toStartOf="@+id/ivExternalVideo"
             android:layout_marginStart="10dp"
             android:textSize="@dimen/textSize18"
             android:textColor="@color/textColorLightBackground"
@@ -84,39 +94,39 @@
             android:text="@string/_0_kb_s"/>
 
         <TextView
-            android:id="@+id/tvSeeds"
+            android:id="@+id/tvProgress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_toEndOf="@+id/ivCover"
             android:layout_below="@+id/tvSpeed"
             android:layout_marginStart="10dp"
             android:textSize="@dimen/textSize14"
-            android:textColor="@color/textColorLightBackground"
+            android:textColor="#088f00"
             android:maxLines="3"
             android:ellipsize="end"
+            android:textStyle="bold"
             android:gravity="center_vertical|start"
-            android:text="@string/_108_seeds"/>
+            android:text="@string/downloaded_0"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_below="@+id/tvSeeds"
+            android:layout_below="@+id/tvProgress"
             android:layout_toEndOf="@+id/ivCover"
             android:layout_marginStart="10dp">
 
             <TextView
-                android:id="@+id/tvProgress"
+                android:id="@+id/tvSeeds"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="0.8"
                 android:textSize="@dimen/textSize14"
-                android:textColor="#088f00"
-                android:textStyle="bold"
+                android:textColor="@color/textColorLightBackground"
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:gravity="center_vertical"
-                android:text="@string/downloaded_0"/>
+                android:text="@string/_108_seeds"/>
 
             <ImageView
                 android:id="@+id/ivPause"
@@ -125,6 +135,14 @@
                 android:layout_weight="1"
                 android:contentDescription="@string/pause"
                 android:src="@drawable/ic_file_download_black_40dp"/>
+
+            <ImageView
+                android:id="@+id/ivStop"
+                android:layout_width="match_parent"
+                android:layout_height="30dp"
+                android:layout_weight="1"
+                android:contentDescription="@string/pause"
+                android:src="@drawable/ic_stop_black_30dp"/>
 
             <ImageView
                 android:id="@+id/ivDelete"

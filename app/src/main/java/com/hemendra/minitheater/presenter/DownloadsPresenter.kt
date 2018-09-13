@@ -38,7 +38,7 @@ class DownloadsPresenter private constructor():
         downloadsList?.let {
             for(movie in it.movies) {
                 if(movie.isDownloading) {
-                    startDownload(context, movie)
+                    startDownload(context, movie, false)
                     break
                 }
             }
@@ -78,10 +78,14 @@ class DownloadsPresenter private constructor():
         return ArrayList()
     }
 
-    override fun startDownload(context: Context, movie: Movie): DownloadFailureReason {
-        return if(DownloaderService.isRunning) {
+    override fun startDownload(context: Context,
+                               movie: Movie, stopOngoing: Boolean): DownloadFailureReason {
+        return if(!stopOngoing && DownloaderService.isRunning) {
             DownloadFailureReason.ALREADY_DOWNLOADING
         } else if(downloadsList?.startDownload(movie) == true) {
+            if(stopOngoing) {
+                context.stopService(Intent(context, DownloaderService::class.java))
+            }
             saveState()
             val intent = Intent(context, DownloaderService::class.java)
             intent.putExtra(DownloaderService.EXTRA_MOVIE, movie)
@@ -95,10 +99,22 @@ class DownloadsPresenter private constructor():
         }
     }
 
-    override fun pauseDownload(context: Context, movie: Movie): Boolean {
+    override fun pauseOrResumeDownload(context: Context, movie: Movie): Boolean {
         return if(!DownloaderService.isRunning) {
             false
-        } else if(downloadsList?.pauseDownload(movie) == true) {
+        } else if(downloadsList?.pauseOrResumeDownload(movie) == true) {
+            saveState()
+            val intent = Intent(context, DownloaderService::class.java)
+            intent.putExtra("action", "Pause")
+            context.startService(intent)
+            true
+        } else false
+    }
+
+    override fun stopDownload(context: Context, movie: Movie): Boolean {
+        return if(!DownloaderService.isRunning) {
+            false
+        } else if(downloadsList?.stopDownload(movie) == true) {
             saveState()
             context.stopService(Intent(context, DownloaderService::class.java))
         } else false
@@ -117,7 +133,7 @@ class DownloadsPresenter private constructor():
                 && subDirs.isNotEmpty() && subDirs[0].isDirectory) {
             val files = subDirs[0].listFiles()
             if(files != null
-                    && files.isNotEmpty() && files[0].isFile)
+                    && files.isNotEmpty() && files[0].isFile && files[0].length() > 0)
                 return files[0]
         }
         return null

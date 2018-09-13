@@ -10,7 +10,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -30,10 +29,9 @@ public class LocalFileStreamingServer implements Runnable {
     private boolean isRunning = false;
     private ServerSocket socket;
     private Thread thread;
-    private long cbSkip;
-    private boolean seekRequest;
     private File mMovieFile;
-    private long actualCompleteMovieLength = 0;
+    private long actualCompleteMovieLength;
+    private ExternalResourceDataSource dataSource;
 
     private static final int DATA_READY = 1;
     private static final int DATA_NOT_READY = 2;
@@ -48,13 +46,7 @@ public class LocalFileStreamingServer implements Runnable {
     public LocalFileStreamingServer(File file, long actualCompleteMovieLength) {
         mMovieFile = file;
         this.actualCompleteMovieLength = actualCompleteMovieLength;
-    }
-
-    /**
-     * @return A port number assigned by the OS.
-     */
-    public int getPort() {
-        return port;
+        dataSource = new ExternalResourceDataSource(mMovieFile);
     }
 
     /**
@@ -63,21 +55,16 @@ public class LocalFileStreamingServer implements Runnable {
      * This only needs to be called once per instance. Once initialized, the
      * server can be started and stopped as needed.
      */
-    public String init() {
-        String url = null;
+    public void init() {
         try {
             socket = new ServerSocket(port);
-
             socket.setSoTimeout(10000);
-
-            url = "http://" + socket.getInetAddress().getHostAddress() + ":" + port;
-            Log.e(TAG, "Server started at " + url);
+            Log.e(TAG, "Server started at localhost:"+port);
         } catch (UnknownHostException e) {
             Log.e(TAG, "Error UnknownHostException server", e);
         } catch (IOException e) {
             Log.e(TAG, "Error IOException server", e);
         }
-        return url;
     }
 
     public String getFileUrl() {
@@ -138,9 +125,8 @@ public class LocalFileStreamingServer implements Runnable {
                     continue;
                 }
                 Log.e(TAG, "client connected at " + port);
-                ExternalResourceDataSource data = new ExternalResourceDataSource(mMovieFile);
                 Log.e(TAG, "processing request...");
-                processRequest(data, client);
+                processRequest(client);
             } catch (SocketTimeoutException e) {
                 Log.e(TAG, "No client connected, waiting for client...", e);
                 // Do nothing
@@ -156,98 +142,94 @@ public class LocalFileStreamingServer implements Runnable {
      * Find byte index separating header from body. It must be the last byte of
      * the first two sequential new lines.
      **/
-    private int findHeaderEnd(final byte[] buf, int rlen) {
-        int splitbyte = 0;
-        while (splitbyte + 3 < rlen) {
-            if (buf[splitbyte] == '\r' && buf[splitbyte + 1] == '\n'
-                    && buf[splitbyte + 2] == '\r' && buf[splitbyte + 3] == '\n')
-                return splitbyte + 4;
-            splitbyte++;
+    private boolean headerEndReached(final byte[] buf, int totalRead) {
+        for(int i=0; i+3<totalRead; i++) {
+            if (buf[i] == '\r' && buf[i + 1] == '\n'
+                    && buf[i + 2] == '\r' && buf[i + 3] == '\n') {
+                return true;
+            }
         }
-        return 0;
+        return false;
     }
 
     /**
      * Sends the HTTP response to the client, including headers (as applicable)
      * and content.
      */
-    private void processRequest(ExternalResourceDataSource dataSource,
-                                Socket client) throws IllegalStateException, IOException {
+    private void processRequest(Socket client) throws IllegalStateException, IOException {
         if (dataSource == null) {
             Log.e(TAG, "Invalid (null) resource.");
             client.close();
             return;
         }
-        InputStream is = client.getInputStream();
-        final int bufsize = 8192;
-        byte[] buf = new byte[bufsize];
-        int splitbyte = 0;
-        int rlen = 0;
 
-        {
-            int read = is.read(buf, 0, bufsize);
-            while (read > 0)
-            {
-                rlen += read;
-                splitbyte = findHeaderEnd(buf, rlen);
-                if (splitbyte > 0)
-                    break;
-                read = is.read(buf, rlen, bufsize - rlen);
-            }
+        InputStream is = client.getInputStream();
+        final int bufferSize = 8192;
+        byte[] buf = new byte[bufferSize];
+        int totalRead = 0;
+
+        int read = is.read(buf, 0, bufferSize);
+        while (read > 0) {
+            totalRead += read;
+
+            if(headerEndReached(buf, totalRead)) break;
+
+            read = is.read(buf, totalRead, bufferSize - totalRead);
         }
 
         // Create a BufferedReader for parsing the header.
-        ByteArrayInputStream hbis = new ByteArrayInputStream(buf, 0, rlen);
-        BufferedReader hin = new BufferedReader(new InputStreamReader(hbis));
+        ByteArrayInputStream bin = new ByteArrayInputStream(buf, 0, totalRead);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(bin));
         Properties pre = new Properties();
-        Properties parms = new Properties();
+        Properties requestParameters = new Properties();
         Properties header = new Properties();
 
-        try {
-            decodeHeader(hin, pre, parms, header);
-        } catch (InterruptedException e1) {
-            Log.e(TAG, "Exception: " + e1.getMessage());
-            e1.printStackTrace();
+        decodeHeader(reader, pre, requestParameters, header);
+
+        for (Entry<Object, Object> e : pre.entrySet()) {
+            Log.d(TAG, "pre: " + e.getKey() + " : " + e.getValue());
         }
+
+        for (Entry<Object, Object> e : requestParameters.entrySet()) {
+            Log.d(TAG, "requestParameters: " + e.getKey() + " : " + e.getValue());
+        }
+
         for (Entry<Object, Object> e : header.entrySet()) {
-            Log.e(TAG, "Header: " + e.getKey() + " : " + e.getValue());
+            Log.d(TAG, "Request Header: " + e.getKey() + " : " + e.getValue());
         }
+
         String range = header.getProperty("range");
-        cbSkip = 0;
-        seekRequest = false;
+        long bytesToSkip = 0;
+        boolean seekRequest = false;
         if (range != null) {
-            Log.e(TAG, "range is: " + range);
+            Log.d(TAG, "range is: " + range);
             seekRequest = true;
             range = range.substring(6);
             int charPos = range.indexOf('-');
             if (charPos > 0) {
                 range = range.substring(0, charPos);
             }
-            cbSkip = Long.parseLong(range);
-            Log.e(TAG, "range found!! " + cbSkip);
+            bytesToSkip = Long.parseLong(range);
+            Log.d(TAG, "range found!! " + bytesToSkip);
         }
         String headers = "";
         // Log.e(TAG, "is seek request: " + seekRequest);
-        if (seekRequest) {
-            // It is a seek or skip request if there's a Range
-            //
-            // header
-            headers += "HTTP/1.1 206 Partial Content\r\n";
-            headers += "Content-Type: " + dataSource.getContentType() + "\r\n";
-            headers += "Accept-Ranges: bytes\r\n";
-            headers += "Content-Length: " + dataSource.getContentLength(false)
-                    + "\r\n";
-            headers += "Content-Range: bytes " + cbSkip + "-"
-                    + dataSource.getContentLength(true) + "/*\r\n";
-            headers += "\r\n";
-        } else {
+        if(dataSource.isDownloadComplete()) {
             headers += "HTTP/1.1 200 OK\r\n";
-            headers += "Content-Type: " + dataSource.getContentType() + "\r\n";
-            headers += "Accept-Ranges: bytes\r\n";
-            headers += "Content-Length: " + dataSource.getContentLength(false)
-                    + "\r\n";
-            headers += "\r\n";
+        } else {
+            headers += "HTTP/1.1 206 Partial Content\r\n";
+            headers += "Content-Range: bytes " + bytesToSkip + "-"
+                    + dataSource.getDownloadedLength() + "/"
+                    + dataSource.getContentLength(true) + "\r\n";
         }
+
+        headers += "Content-Type: " + dataSource.getContentType() + "\r\n";
+        headers += "Accept-Ranges: bytes\r\n";
+        headers += "Connection: keep-alive\r\n";
+        headers += "Content-Length: " + dataSource.getContentLength(true) + "\r\n";
+        headers += "\r\n";
+
+        Log.d(TAG, "Response Headers: "+headers);
 
         InputStream data = null;
         try {
@@ -259,52 +241,55 @@ public class LocalFileStreamingServer implements Runnable {
             // Start sending content.
 
             byte[] buff = new byte[1024 * 50];
-            Log.e(TAG, "No of bytes skipped: " + data.skip(cbSkip));
+            Log.e(TAG, "No of bytes skipped: " + data.skip(bytesToSkip));
             int cbSentThisBatch = 0;
             while (isRunning) {
                 // Check if data is ready
-                while (!dataSource.isDataReady()) {
+                while (!dataSource.isDataReady() && isRunning) {
                     if (dataStatus == DATA_READY) {
-                        Log.e(TAG, "error in reading bytess**********(Data ready)");
+                        //Log.e(TAG, "error in reading bytes**********(Data ready)");
                         break;
                     } else if (dataStatus == DATA_CONSUMED) {
-                        Log.e(TAG, "error in reading bytess**********(All Data consumed)");
+                        //Log.e(TAG, "error in reading bytes**********(All Data consumed)");
                         break;
                     } else if (dataStatus == DATA_NOT_READY) {
-                        Log.e(TAG, "error in reading bytess**********(Data not ready)");
+                        //Log.e(TAG, "error in reading bytes**********(Data not ready)");
                     } else if (dataStatus == DATA_NOT_AVAILABLE) {
-                        Log.e(TAG, "error in reading bytess**********(Data not available)");
+                        //Log.e(TAG, "error in reading bytes**********(Data not available)");
                     }
                     // wait for a second if data is not ready
                     synchronized (this) {
                         Thread.sleep(1000);
                     }
                 }
-                Log.e(TAG, "error in reading bytess**********(Data ready)");
+                //Log.e(TAG, "error in reading bytes**********(Data ready)");
 
                 int cbRead = data.read(buff, 0, buff.length);
-                if (cbRead == -1) {
+                if (cbRead == -1 && isRunning) {
                     Log.e(TAG,
-                            "readybytes are -1 and this is simulate streaming, close the ips and create another  ");
+                            "read-bytes are -1 and this is simulate streaming, close the ips and create another");
                     data.close();
                     data = dataSource.createInputStream();
                     cbRead = data.read(buff, 0, buff.length);
-                    if (cbRead == -1) {
-                        Log.e(TAG, "error in reading bytess**********");
+                    if (cbRead == -1 && isRunning) {
+                        Log.e(TAG, "error in reading bytes**********");
                         throw new IOException(
                                 "Error re-opening data source for looping.");
                     }
                 }
-                client.getOutputStream().write(buff, 0, cbRead);
-                client.getOutputStream().flush();
-                cbSkip += cbRead;
-                cbSentThisBatch += cbRead;
 
-                dataSource.consumedb += cbRead;
+                if(isRunning) {
+                    client.getOutputStream().write(buff, 0, cbRead);
+                    client.getOutputStream().flush();
+                    bytesToSkip += cbRead;
+                    cbSentThisBatch += cbRead;
+
+                    dataSource.streamedBytes += cbRead;
+                }
             }
             Log.e(TAG, "cbSentThisBatch: " + cbSentThisBatch);
             // If we did nothing this batch, block for a second
-            if (cbSentThisBatch == 0) {
+            if (cbSentThisBatch == 0 && isRunning) {
                 Log.e(TAG, "Blocking until more data appears");
                 Thread.sleep(1000);
             }
@@ -328,7 +313,7 @@ public class LocalFileStreamingServer implements Runnable {
      * value pairs
      **/
     private void decodeHeader(BufferedReader in, Properties pre,
-                              Properties parms, Properties header) throws InterruptedException {
+                              Properties parms, Properties header) {
         try {
             // Read the request line
             String inLine = in.readLine();
@@ -385,8 +370,7 @@ public class LocalFileStreamingServer implements Runnable {
      * simplicity of Properties -- if you need multiples, you might want to
      * replace the Properties with a Hashtable of Vectors or such.
      */
-    private void decodeParms(String parms, Properties p)
-            throws InterruptedException {
+    private void decodeParms(String parms, Properties p) {
         if (parms == null)
             return;
 
@@ -405,9 +389,9 @@ public class LocalFileStreamingServer implements Runnable {
      * Decodes the percent encoding scheme. <br/>
      * For example: "an+example%20string" -> "an example string"
      */
-    private String decodePercent(String str) throws InterruptedException {
+    private String decodePercent(String str) {
         try {
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < str.length(); i++) {
                 char c = str.charAt(i);
                 switch (c) {
@@ -431,18 +415,22 @@ public class LocalFileStreamingServer implements Runnable {
         }
     }
 
+    public float getBufferPercentage() {
+        return dataSource.getDownloadedPercentage();
+    }
+
     /**
      * provides meta-data and access to a stream for resources on SD card.
      */
     protected class ExternalResourceDataSource {
         private final File movieResource;
         long contentLength;
-        private FileInputStream inputStream;
-        long consumedb = 0;
+        private FileInputStream inputStream = null;
+        long streamedBytes = 0;
 
         ExternalResourceDataSource(File resource) {
             movieResource = resource;
-            Log.e(TAG, "respurcePath is: " + mMovieFile.getPath());
+            Log.e(TAG, "movieResource path is: " + movieResource.getPath());
         }
 
         /**
@@ -452,7 +440,6 @@ public class LocalFileStreamingServer implements Runnable {
          * @return A MIME content type.
          */
         String getContentType() {
-            // TODO: Support other media if we need to
             return "video/mp4";
         }
 
@@ -461,13 +448,21 @@ public class LocalFileStreamingServer implements Runnable {
          * resource. This method must be implemented.
          *
          * @return An <code>InputStream</code> to access the resource.
-         * @throws IOException If the implementing class produces an error when opening
-         *                     the stream.
          */
-        InputStream createInputStream() throws IOException {
+        InputStream createInputStream() {
             // NB: Because createInputStream can only be called once per asset
             // we always create a new file descriptor here.
-            getInputStream();
+            try {
+                inputStream = new FileInputStream(movieResource);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+            // File temp = new File(resourcePath);
+            contentLength = movieResource.length();
+            Log.e(TAG, "file exists??" + movieResource.exists()
+                    + " and content length is: " + contentLength);
+
             return inputStream;
         }
 
@@ -485,32 +480,38 @@ public class LocalFileStreamingServer implements Runnable {
             if (!ignoreSimulation) {
                 return -1;
             }
-            return contentLength;
+            return actualCompleteMovieLength;
         }
 
-        private void getInputStream() {
-            try {
-                inputStream = new FileInputStream(movieResource);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-            // File temp = new File(respurcePath);
-            contentLength = movieResource.length();
-            Log.e(TAG, "file exists??" + movieResource.exists()
-                    + " and content length is: " + contentLength);
+        long getDownloadedLength() {
+            return movieResource.length();
+        }
+
+        boolean isDownloadComplete() {
+            return getDownloadedLength() >= actualCompleteMovieLength;
+        }
+
+        float getDownloadedPercentage() {
+            double downloaded = (double) getDownloadedLength();
+            double total = (double) actualCompleteMovieLength;
+            float percent = (float)((downloaded / total) * 100f);
+            return percent > 100f ? 100f : percent;
         }
 
         boolean isDataReady() {
             dataStatus = -1;
             boolean res = false;
-            long readb = movieResource.length();
-            if(actualCompleteMovieLength == readb){
+            long downloadedBytes = getDownloadedLength();
+            /*Log.d(TAG, String.format("Downloaded: %.3f MB / %.3f MB",
+                    ((double)downloadedBytes/1024f/1024f),
+                    ((double)actualCompleteMovieLength/1024f/1024f)));*/
+            if(actualCompleteMovieLength == downloadedBytes){
                 dataStatus = DATA_CONSUMED;
                 res = false;
-            }else if(readb > consumedb){
+            }else if(downloadedBytes > streamedBytes){
                 dataStatus = DATA_READY;
                 res = true;
-            }else if(readb <= consumedb){
+            }else if(downloadedBytes <= streamedBytes){
                 dataStatus = DATA_NOT_READY;
                 res = false;
             }else if(actualCompleteMovieLength == -1){

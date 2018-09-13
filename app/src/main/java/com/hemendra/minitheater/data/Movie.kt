@@ -36,6 +36,7 @@ class Movie: Serializable {
     var date_uploaded_unix: Long = 0
 
     var isDownloading: Boolean = false
+    var isPaused: Boolean = false
 
     var downloadProgress: Float = 0f
     var downloadSeeds: Int = 0
@@ -74,6 +75,7 @@ class Movie: Serializable {
         movie.date_uploaded_unix = date_uploaded_unix
 
         movie.isDownloading = isDownloading
+        movie.isPaused = isPaused
 
         movie.downloadProgress = downloadProgress
         movie.downloadSeeds = downloadSeeds

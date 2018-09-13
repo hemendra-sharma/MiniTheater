@@ -30,7 +30,9 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
     private val tvProgress: TextView = view.findViewById(R.id.tvProgress)
     private val tvSeeds: TextView = view.findViewById(R.id.tvSeeds)
     private val tvSpeed: TextView = view.findViewById(R.id.tvSpeed)
+    private val ivExternalVideo: ImageView = view.findViewById(R.id.ivExternalVideo)
     private val ivPause: ImageView = view.findViewById(R.id.ivPause)
+    private val ivStop: ImageView = view.findViewById(R.id.ivStop)
     private val ivDelete: ImageView = view.findViewById(R.id.ivDelete)
     var movie: Movie? = null
 
@@ -49,9 +51,17 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         view.setOnClickListener{
             listener.onItemClicked(m)
         }
+        ivExternalVideo.setOnClickListener {
+            listener.onExternalClicked(m)
+        }
         ivPause.setOnClickListener {
             saveProgress()
             listener.onPauseClicked(m)
+            updateProgress(m)
+        }
+        ivStop.setOnClickListener {
+            saveProgress()
+            listener.onStopClicked(m)
             updateProgress(m)
         }
         ivDelete.setOnClickListener {
@@ -65,9 +75,13 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         movie?.downloadSpeed = m.downloadSpeed
         movie?.uploadSpeed = m.uploadSpeed
         movie?.downloadSeeds = m.downloadSeeds
+        movie?.isDownloading = m.isDownloading
+        movie?.isPaused = m.isPaused
 
-        var status = "(Paused)"
-        if(m.isDownloading) status = ""
+        var status = ""
+        if(m.isDownloading && m.isPaused) status = "(Paused)"
+        else if(!m.isDownloading) status = "(Stopped)"
+
         tvSpeed.text = String.format(Locale.getDefault(),
                 "D: %.1f KB/s, U: %.1f KB/s %s",
                 (m.downloadSpeed.toFloat() / 1024f),
@@ -75,15 +89,24 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
 
         tvSeeds.text = String.format(Locale.getDefault(), "%d Seeds", m.downloadSeeds)
 
+        var downloadedMB = m.torrents[0].size_bytes.toDouble() * m.downloadProgress.toDouble()
+        downloadedMB = downloadedMB / 1024f / 1024f
+
         tvProgress.text = String.format(Locale.getDefault(),
-                "%.2f%%", m.downloadProgress * 100f)
+                "%.2f%% (%.1f MB)", m.downloadProgress * 100f, downloadedMB)
 
         if(m.isDownloading) {
-            ivPause.setImageResource(R.drawable.ic_pause_black_30dp)
+            if(m.isPaused) {
+                ivPause.setImageResource(R.drawable.ic_play_arrow_black_40dp)
+            } else {
+                ivPause.setImageResource(R.drawable.ic_pause_black_30dp)
+            }
             ivDelete.setImageResource(R.drawable.ic_delete_grey_30dp)
+            ivStop.visibility = View.VISIBLE
         } else {
             ivPause.setImageResource(R.drawable.ic_file_download_black_40dp)
             ivDelete.setImageResource(R.drawable.ic_delete_black_30dp)
+            ivStop.visibility = View.GONE
         }
     }
 
@@ -98,6 +121,9 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         val filter = IntentFilter(DownloaderService.ACTION_DOWNLOAD_FAILED)
         filter.addAction(DownloaderService.ACTION_PROGRESS_UPDATE)
         filter.addAction(DownloaderService.ACTION_DOWNLOAD_COMPLETE)
+        filter.addAction(DownloaderService.ACTION_DOWNLOAD_PAUSED)
+        filter.addAction(DownloaderService.ACTION_DOWNLOAD_RESUMED)
+        filter.addAction(DownloaderService.ACTION_DOWNLOAD_STOPPED)
         mgr.registerReceiver(downloadReceiver, filter)
     }
 

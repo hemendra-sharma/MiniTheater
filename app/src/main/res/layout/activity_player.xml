@@ -1,17 +1,118 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:gravity="center"
-    android:background="#000000">
+    android:layout_height="match_parent">
 
-    <VideoView
-        android:id="@+id/videoView"
+    <LinearLayout
+        android:id="@+id/llHolder"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:foregroundGravity="center">
-    </VideoView>
+        android:gravity="center"
+        android:orientation="vertical"
+        android:background="#000000"
+        android:fitsSystemWindows="true"
+        android:focusableInTouchMode="true"
+        android:focusable="true"
+        android:clickable="true">
 
-</LinearLayout>
+        <SurfaceView
+            android:id="@+id/surfaceView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:foregroundGravity="center"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:clickable="false">
+        </SurfaceView>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvDownloadInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="10dp"
+        android:text="Downloaded 0%"
+        android:textColor="#aeaeae"
+        android:textSize="@dimen/textSize14"
+        android:visibility="gone"/>
+
+    <com.hemendra.minitheater.view.player.SubtitlesView
+        android:id="@+id/subtitleView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="10dp"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:textColor="#ffffff"
+        android:textSize="@dimen/textSize14"
+        android:visibility="visible"/>
+
+    <RelativeLayout
+        android:id="@+id/rlSubtitles"
+        android:layout_width="250dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvSubtitles"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:textSize="@dimen/textSize14"
+            android:gravity="center"
+            android:background="#000000"
+            android:text="@string/subtitles"
+            android:textColor="#ffffff"/>
+
+        <ListView
+            android:id="@+id/lvSubtitles"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#aa000000"
+            android:layout_below="@+id/tvSubtitles"
+            android:divider="#00000000"
+            android:dividerHeight="10dp"/>
+
+        <ProgressBar
+            android:id="@+id/pbSubtitles"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_centerInParent="true"/>
+
+    </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/ivSubtitles"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:contentDescription="@string/subtitles"
+        android:src="@drawable/ic_subtitles_white_40dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginTop="10dp"/>
+
+    <RelativeLayout
+        android:id="@+id/rlProgress"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:clickable="true">
+
+        <ProgressBar
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_centerInParent="true"/>
+
+    </RelativeLayout>
+
+</RelativeLayout>
