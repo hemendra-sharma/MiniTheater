@@ -133,9 +133,15 @@ class DownloaderFragment: Fragment() {
 
         override fun onStopClicked(movie: Movie) {
             context?.let {
-                if(!downloadsPresenter.stopDownload(it, movie)) {
-                    showMessage(it, "Failed to Stop Download!")
-                }
+                val msg = """You may not be able to resume the download if you stop it. If the
+                    |movie is not downloaded completely, then you should only Pause/Resume.
+                    |Do you want to stop the download anyway?
+                """.trimMargin()
+                showYesNoMessage(it, msg, onYesClicked = Runnable {
+                    if(!downloadsPresenter.stopDownload(it, movie)) {
+                        showMessage(it, "Failed to Stop Download!")
+                    }
+                })
             }
         }
 
@@ -146,7 +152,7 @@ class DownloaderFragment: Fragment() {
                 } else {
                     val msg = """The downloaded movie data will be deleted.
                         |Are you sure you want to delete the movie "${movie.title}"?""".trimMargin()
-                    showYesNoMessage(it, msg, Runnable {
+                    showYesNoMessage(it, msg, onYesClicked = Runnable {
                         downloadsPresenter.stopDownload(it, movie)
                         downloadsPresenter.removeDownload(movie)
                         loadFreshList()

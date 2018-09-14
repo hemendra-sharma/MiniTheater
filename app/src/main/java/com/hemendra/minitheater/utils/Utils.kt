@@ -21,6 +21,42 @@ class Utils {
             return false
         }
 
+        fun readByteArrayFromFile(file: File): ByteArray? {
+            var instr: FileInputStream? = null
+            var bufferIn: BufferedInputStream? = null
+            var out: ByteArrayOutputStream? = null
+            try {
+                if(!file.exists()) return null
+
+                instr = FileInputStream(file)
+                bufferIn = BufferedInputStream(instr)
+                out = ByteArrayOutputStream()
+
+                val buffer = ByteArray(1024)
+                var read = bufferIn.read(buffer)
+                while(read != -1) {
+                    out.write(buffer, 0, read)
+                    read = bufferIn.read(buffer)
+                }
+                return out.toByteArray()
+            } catch (e: ClassNotFoundException) {
+                e.printStackTrace()
+                deleteFile(file)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }finally {
+                try {
+                    //releasing the InputStreams and OutputStreams
+                    instr?.close()
+                    bufferIn?.close()
+                    out?.close()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
+            return null
+        }
+
         fun readObjectFromFile(file: File): Any? {
             var instr: FileInputStream? = null
             var bufferIn: BufferedInputStream? = null
@@ -39,7 +75,7 @@ class Utils {
                 e.printStackTrace()
             }finally {
                 try {
-                    //releasing the FileInputStream and ObjectInput
+                    //releasing the InputStreams and OutputStreams
                     instr?.close()
                     bufferIn?.close()
                     objIn?.close()
@@ -122,12 +158,21 @@ class Utils {
             return false
         }
 
+        fun moveFile(source: File, dest: File): Boolean {
+            if(source.absolutePath == dest.absolutePath) return true
+
+            val data = readByteArrayFromFile(source)
+            return if(data != null)
+                writeToFile(data, dest)
+            else false
+        }
+
         /**
          * Delete the file at the given path
          * @param file target File
          * @return TRUE if deleted successfully, FALSE otherwise.
          */
-        public fun deleteFile(file: File): Boolean {
+        fun deleteFile(file: File): Boolean {
             return file.exists() && file.delete()
         }
 

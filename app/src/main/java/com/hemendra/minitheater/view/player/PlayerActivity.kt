@@ -64,8 +64,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
     private var subtitlesAdapter: SubtitlesListAdapter? = null
 
-    private var loadedSubtitlesFile: File? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
                 or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
@@ -98,7 +96,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                                         pbSubtitles.visibility = View.GONE
                                     }
                                     override fun onFailedToDownloadList() {
-                                        pbSubtitles.visibility = View.GONE
+                                        pbSubtitles.visibility = View.VISIBLE
                                     }
                                 })
                     }
@@ -158,8 +156,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                     object: SubtitleDownloadListener{
                         override fun onSubtitleDownloaded(subtitleFile: File) {
                             setSubtitles(subtitleFile)
-                            Toast.makeText(applicationContext, "Subtitles Loaded",
-                                    Toast.LENGTH_SHORT).show()
                         }
                         override fun onFailedToDownload() {
                             Toast.makeText(applicationContext,
@@ -170,12 +166,38 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         }
     }
 
-    private fun setSubtitles(subtitleFile: File) {
-        loadedSubtitlesFile = subtitleFile
+    private fun getDownloadDirectoryFor(torrent: com.hemendra.minitheater.data.Torrent): File {
+        val path = """${Environment.getExternalStorageDirectory().absolutePath}/MiniTheater"""
+        val downloadsDirectory = File(path)
+        return File("""${downloadsDirectory.absolutePath}/${torrent.hash}""")
+    }
+
+    private fun getLoadedSubtitlesFile(): File? {
+        movie?.let {
+            val dir = getDownloadDirectoryFor(it.torrents[0])
+            val newFile = File(dir, "subtitles.srt")
+            if(newFile.exists() && newFile.length() > 0)
+                return newFile
+        }
+        return null
+    }
+
+    private fun setSubtitles(file: File) {
+        var subtitleFile = file
+
+        movie?.let {
+            val dir = getDownloadDirectoryFor(it.torrents[0])
+            val newFile = File(dir, "subtitles.srt")
+            if(Utils.moveFile(subtitleFile, newFile))
+                subtitleFile = newFile
+        }
+
         mediaPlayer?.let { mp ->
             subtitleView.setMediaPlayer(mp)
             subtitleView.setSubtitlesFile(subtitleFile)
             subtitleView.run()
+            Toast.makeText(applicationContext, "Subtitles Loaded",
+                    Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -225,13 +247,18 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
     }
 
     private fun updateProgress(m: Movie) {
+        val percentage = m.downloadProgress * 100f
         tvDownloadInfo.text = String.format(Locale.getDefault(),
-                "Downloaded %.2f%%", m.downloadProgress * 100f)
+                "Downloaded %.2f%%", percentage)
 
-        if(rlProgress.visibility == View.VISIBLE) {
+        var max = Math.round((duration * (percentage / 100f)) - 120000f)
+        if (max < 0) max = 0
+
+        if(rlProgress.visibility == View.VISIBLE
+            && max > mediaPlayer?.currentPosition ?: 0) {
             if(activityShowing) {
-                if(!isPlaying) mediaPlayer?.start()
-                rlProgress.visibility = View.GONE
+                destroyMediaPlayerAndStopServer()
+                Handler().postDelayed({ startMediaPlayerAndServer() }, 500)
             }
         }
     }
@@ -325,21 +352,17 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
             MediaPlayer.MEDIA_INFO_SUBTITLE_TIMED_OUT -> sb.append("MEDIA_INFO_SUBTITLE_TIMED_OUT")
             MediaPlayer.MEDIA_INFO_UNKNOWN -> sb.append("MEDIA_INFO_UNKNOWN")
             MediaPlayer.MEDIA_INFO_UNSUPPORTED_SUBTITLE -> sb.append("MEDIA_INFO_UNSUPPORTED_SUBTITLE")
-            MediaPlayer.MEDIA_INFO_BUFFERING_START
-                    or MediaPlayer.MEDIA_INFO_VIDEO_NOT_PLAYING
-                    or MediaPlayer.MEDIA_INFO_BAD_INTERLEAVING
-                    or MediaPlayer.MEDIA_INFO_AUDIO_NOT_PLAYING
-                    or 703 /*MEDIA_INFO_NETWORK_BANDWIDTH*/ -> {
+            MediaPlayer.MEDIA_INFO_BUFFERING_START,
+                    MediaPlayer.MEDIA_INFO_VIDEO_NOT_PLAYING,
+                    MediaPlayer.MEDIA_INFO_BAD_INTERLEAVING,
+                    MediaPlayer.MEDIA_INFO_AUDIO_NOT_PLAYING,
+                    703 /*MEDIA_INFO_NETWORK_BANDWIDTH*/ -> {
                 sb.append("MEDIA_INFO_VIDEO_NOT_PLAYING " +
                         "| MEDIA_INFO_VIDEO_NOT_PLAYING " +
                         "| MEDIA_INFO_BAD_INTERLEAVING " +
                         "| MEDIA_INFO_NETWORK_BANDWIDTH : $what")
                 mediaPlayer?.stop()
                 rlProgress.visibility = View.VISIBLE
-
-                /*if(mediaPlayer?.currentPosition ?: 0 < maxSeekPosition()) {
-
-                }*/
             }
             MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
                 sb.append("MEDIA_INFO_VIDEO_RENDERING_START")
@@ -367,7 +390,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         rlProgress.visibility = View.GONE
         mediaPlayerPrepared = true
 
-        loadedSubtitlesFile?.let { setSubtitles(it) }
+        getLoadedSubtitlesFile()?.let { setSubtitles(it) }
 
         if(positionBeforePaused > 0)
             mediaPlayer?.seekTo(positionBeforePaused)
@@ -439,18 +462,18 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         return localFileStreamingServer?.bufferPercentage?.toInt() ?: 0
     }
 
+    private fun maxSeekPosition(): Int {
+        var max = Math.round((duration * (bufferPercentage / 100f)) - 120000f)
+        if (max < 0) max = 0
+        return max
+    }
+
     @Synchronized override fun seekTo(pos: Int) {
         mediaPlayer?.let {
             synchronized(it) {
                 it.seekTo(Math.min(pos, maxSeekPosition()))
             }
         }
-    }
-
-    private fun maxSeekPosition(): Int {
-        var max = Math.round((duration * (bufferPercentage / 100f)) - 120000f)
-        if (max < 0) max = 0
-        return max
     }
 
     override fun getCurrentPosition(): Int {

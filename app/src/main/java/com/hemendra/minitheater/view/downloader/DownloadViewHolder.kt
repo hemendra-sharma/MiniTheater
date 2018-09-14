@@ -102,11 +102,15 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
                 ivPause.setImageResource(R.drawable.ic_pause_black_30dp)
             }
             ivDelete.setImageResource(R.drawable.ic_delete_grey_30dp)
+            ivPause.visibility = View.VISIBLE
             ivStop.visibility = View.VISIBLE
         } else {
             ivPause.setImageResource(R.drawable.ic_file_download_black_40dp)
             ivDelete.setImageResource(R.drawable.ic_delete_black_30dp)
             ivStop.visibility = View.GONE
+            if(m.downloadProgress >= 1f) {
+                ivPause.visibility = View.GONE // download complete
+            }
         }
     }
 

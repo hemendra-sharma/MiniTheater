@@ -217,7 +217,7 @@ class DownloaderService: Service(), TorrentSessionListener {
         torrentSession?.stop()
         stopForeground(true)
         movie?.let { m ->
-            val intent = Intent(ACTION_DOWNLOAD_PAUSED)
+            val intent = Intent(ACTION_DOWNLOAD_STOPPED)
             intent.putExtra(EXTRA_MOVIE, m)
             m.downloadSeeds = 0
             m.downloadSpeed = 0
@@ -301,7 +301,7 @@ class DownloaderService: Service(), TorrentSessionListener {
             it.downloadSeeds = 0
             it.uploadSpeed = 0
             it.downloadSpeed = 0
-            it.downloadProgress = 100f
+            it.downloadProgress = 1f
             it.isDownloading = false
             it.isPaused = false
             DownloadsPresenter.getInstance().updateDownloadProgress(it)
@@ -417,6 +417,10 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     override fun onPieceFinished(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onPieceFinished")
+        if(torrentHandle.needSaveResumeData()) {
+            torrentHandle.saveResumeData()
+            Log.d("service", "======================== saveResumeData")
+        }
         publishProgress(torrentSessionStatus)
     }
 
@@ -435,9 +439,8 @@ class DownloaderService: Service(), TorrentSessionListener {
     }
 
     override fun onTorrentFinished(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
-        Log.d("service", "onTorrentFinished")
+        Log.d("service", "onTorrentFinished : state: ${torrentSessionStatus.state}")
         if(torrentSessionStatus.state == TorrentStatus.State.FINISHED) {
-            Log.d("service", "onTorrentFinished : broadcast")
             onDownloadFinished()
             showFinishedNotification()
         }

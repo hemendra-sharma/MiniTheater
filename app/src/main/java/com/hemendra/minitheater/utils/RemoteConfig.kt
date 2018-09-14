@@ -165,8 +165,11 @@ class RemoteConfig private constructor() {
             val jsonArray = JSONArray(allMoviesGenresListJSON)
             val length = jsonArray.length()
             for(i in 0 until length) {
-                list.add(jsonArray.getString(i))
+                val value = jsonArray.getString(i)
+                if(allMoviesGenreParameterDefaultValue != value)
+                    list.add(jsonArray.getString(i))
             }
+            list.add(0, allMoviesGenreParameterDefaultValue)
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -186,6 +189,23 @@ class RemoteConfig private constructor() {
             e.printStackTrace()
         }
         return map
+    }
+
+    fun getSortingOptionsList(): ArrayList<String> {
+        val list = ArrayList<String>()
+        try {
+            val jsonObject = JSONObject(allMoviesSortingOptionsJSON)
+            val keys = jsonObject.keys()
+            while(keys.hasNext()) {
+                val key = keys.next()
+                if(key != allMoviesSortingParameterDefaultValue)
+                    list.add(key)
+            }
+            list.add(0, allMoviesSortingParameterDefaultValue)
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+        return list
     }
 
 }

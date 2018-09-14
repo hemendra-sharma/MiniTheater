@@ -33,6 +33,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     private var genreList: ArrayList<String>? = null
     private var sortingOptions: HashMap<String,String>? = null
+    private var sortingOptionsKeys: ArrayList<String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setHasOptionsMenu(true)
@@ -102,6 +103,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         context?.let {
             genreList = RemoteConfig.getInstance().getGenreOptions()
             sortingOptions = RemoteConfig.getInstance().getSortingOptionsMap()
+            sortingOptionsKeys = RemoteConfig.getInstance().getSortingOptionsList()
 
             val genreSpinnerAdapter = ArrayAdapter<String>(it,
                     android.R.layout.simple_spinner_item, genreList!!)
@@ -110,8 +112,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             spinnerGenre.adapter = genreSpinnerAdapter
 
             val sortingSpinnerAdapter = ArrayAdapter<String>(it,
-                    android.R.layout.simple_spinner_item,
-                    ArrayList<String>(sortingOptions!!.values))
+                    android.R.layout.simple_spinner_item, sortingOptionsKeys!!)
             sortingSpinnerAdapter.setDropDownViewResource(android.R.layout
                     .simple_spinner_dropdown_item)
             spinnerSortBy.adapter = sortingSpinnerAdapter
@@ -147,7 +148,9 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         sortingOptions?.let { map ->
             if(map.size > 0) {
                 if(spinnerSortBy.selectedItemPosition != AdapterView.INVALID_POSITION) {
-                    sortBy = ArrayList<String>(map.keys)[spinnerSortBy.selectedItemPosition]
+                    sortingOptionsKeys ?.let { keys ->
+                        sortBy = sortingOptions?.get(keys[spinnerSortBy.selectedItemPosition]) ?: ""
+                    }
                 }
             }
         }
@@ -224,7 +227,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     }
 
     private fun isProgressOrErrorVisible(): Boolean {
-        return rlProgress.visibility == View.VISIBLE
+        return rlProgress ?. let { rlProgress.visibility == View.VISIBLE } ?: true
     }
 
     private fun showProgress(msg: String) {
@@ -235,13 +238,13 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     }
 
     private fun hideProgress() {
-        rlProgress.visibility = View.GONE
+        rlProgress?.let { rlProgress.visibility = View.GONE }
     }
 
     private fun showError(error: String) {
         rlProgress.visibility = View.VISIBLE
         tvProgress.visibility = View.VISIBLE
         pbProgress.visibility = View.GONE
-        tvProgress.text = error
+        tvProgress.text = "$error\n\nTap Here to Retry!"
     }
 }

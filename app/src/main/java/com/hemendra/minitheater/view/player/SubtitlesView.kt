@@ -100,7 +100,7 @@ class SubtitlesView: TextView, Runnable {
             } else {
                 setText(Html.fromHtml(text))
             }
-            postDelayed(this, 1000)
+            postDelayed(this, 300)
         }
     }
 
