@@ -10,13 +10,13 @@ class MoviesDataSource(private var listener: IMoviesDataSourceListener):
 
     private var moviesLoader: MoviesLoader? = null
 
-    override fun searchMovies(query: String, pageNumber: Int) {
+    override fun searchMovies(query: String, pageNumber: Int, sortBy: String, genre: String) {
         moviesLoader?.let {
             listener.onFailure(MoviesDataSourceFailureReason.ALREADY_LOADING)
             return
         }
         moviesLoader = MoviesLoader(this)
-        moviesLoader?.execute(query, pageNumber)
+        moviesLoader?.execute(query, pageNumber, sortBy, genre)
                 ?: listener.onFailure(MoviesDataSourceFailureReason.UNKNOWN)
     }
 

@@ -5,6 +5,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.Torrent
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 import java.net.URLEncoder
 
 class RemoteConfig private constructor() {
@@ -33,6 +36,11 @@ class RemoteConfig private constructor() {
     private var allMoviesLimitParameterName: String = ""
     private var allMoviesQueryParameterName: String = ""
     private var allMoviesSortingParameterName: String = ""
+    private var allMoviesGenreParameterName: String = ""
+    private var allMoviesSortingParameterDefaultValue: String = ""
+    private var allMoviesGenreParameterDefaultValue: String = ""
+    private var allMoviesSortingOptionsJSON: String = ""
+    private var allMoviesGenresListJSON: String = ""
 
     private var imageURL: String = ""
     private var imagePartToExclude: String = ""
@@ -59,6 +67,15 @@ class RemoteConfig private constructor() {
                         allMoviesLimitParameterName = document["all_movies_param_limit"] as String
                         allMoviesQueryParameterName = document["all_movies_param_query"] as String
                         allMoviesSortingParameterName = document["all_movies_param_sort"] as String
+                        allMoviesGenreParameterName = document["all_movies_param_genre"] as String
+                        allMoviesSortingParameterDefaultValue =
+                                document["all_movies_param_sort_default"] as String
+                        allMoviesGenreParameterDefaultValue =
+                                document["all_movies_param_genre_default"] as String
+                        allMoviesSortingOptionsJSON =
+                                document["all_movies_param_sort_list"] as String
+                        allMoviesGenresListJSON =
+                                document["all_movies_param_genre_list"] as String
                     }
                     "get_image" -> {
                         imageURL = document["get_image_url"] as String
@@ -94,17 +111,26 @@ class RemoteConfig private constructor() {
 
     fun getSecurityHeaderValue(): String = headerParameterValue
 
-    fun getMovieSearchURL(query: String, pageNumber: Int): String {
+    fun getMovieSearchURL(query: String, pageNumber: Int,
+                          sortBy: String = allMoviesSortingParameterDefaultValue,
+                          genre: String = allMoviesGenreParameterDefaultValue): String {
         if(!isInitialized) throw(IllegalStateException("Initialization not completed yet !"))
 
         val encQuery = URLEncoder.encode(query, "UTF-8")
+
+        var sortByParam = sortBy
+        if(sortBy.isEmpty()) sortByParam = allMoviesSortingParameterDefaultValue
+
+        var genreParam = genre
+        if(genre.isEmpty()) genreParam = allMoviesGenreParameterDefaultValue
 
         val sb = StringBuilder()
         sb.append(allMoviesURL)
         sb.append("?$allMoviesLimitParameterName=$resultsPerPage")
         sb.append("&$allMoviesPageParameterName=$pageNumber")
         sb.append("&$allMoviesQueryParameterName=$encQuery")
-        sb.append("&$allMoviesSortingParameterName=download_count")
+        sb.append("&$allMoviesSortingParameterName=$sortByParam")
+        sb.append("&$allMoviesGenreParameterName=${genreParam.toLowerCase()}")
         return sb.toString()
     }
 
@@ -131,6 +157,35 @@ class RemoteConfig private constructor() {
 
         return magnetURL.replace(magnetReplaceHash, torrentHash)
                 .replace(magnetReplaceMovieName, movieName)
+    }
+
+    fun getGenreOptions(): ArrayList<String> {
+        val list = ArrayList<String>()
+        try {
+            val jsonArray = JSONArray(allMoviesGenresListJSON)
+            val length = jsonArray.length()
+            for(i in 0 until length) {
+                list.add(jsonArray.getString(i))
+            }
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    fun getSortingOptionsMap(): HashMap<String,String> {
+        val map = HashMap<String,String>()
+        try {
+            val jsonObject = JSONObject(allMoviesSortingOptionsJSON)
+            val keys = jsonObject.keys()
+            while(keys.hasNext()) {
+                val key = keys.next()
+                map[key] = jsonObject.getString(key)
+            }
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+        return map
     }
 
 }

@@ -9,7 +9,7 @@ import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.SearchView
 import android.view.*
-import android.widget.Toast
+import android.widget.AdapterView
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.model.movies.MoviesDataSourceFailureReason
@@ -19,6 +19,9 @@ import com.hemendra.minitheater.presenter.SearchPresenter
 import com.hemendra.minitheater.view.listeners.IExplorerFragment
 import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import kotlinx.android.synthetic.main.fragment_explorer.*
+import android.widget.ArrayAdapter
+import com.hemendra.minitheater.utils.RemoteConfig
+
 
 class ExplorerFragment: Fragment(), IExplorerFragment {
 
@@ -27,6 +30,9 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     private var lastPageNumber = 1
     private var adapter: MoviesListAdapter? = null
     lateinit var onMovieItemClickListener: OnMovieItemClickListener
+
+    private var genreList: ArrayList<String>? = null
+    private var sortingOptions: HashMap<String,String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setHasOptionsMenu(true)
@@ -54,7 +60,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
                 searchView.clearFocus()
                 lastSearched = query
                 lastPageNumber = 1
-                searchPresenter.performSearch(query, lastPageNumber)
+                performSearch(query, lastPageNumber)
                 return false
             }
 
@@ -67,7 +73,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
                 if(lastSearched.isNotEmpty()) {
                     lastSearched = ""
                     lastPageNumber = 1
-                    searchPresenter.performSearch("", lastPageNumber)
+                    performSearch("", lastPageNumber)
                 }
                 return true
             }
@@ -92,16 +98,65 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         (activity as AppCompatActivity).setSupportActionBar(toolbar)
         lastSearched = ""
         lastPageNumber = 1
+
+        context?.let {
+            genreList = RemoteConfig.getInstance().getGenreOptions()
+            sortingOptions = RemoteConfig.getInstance().getSortingOptionsMap()
+
+            val genreSpinnerAdapter = ArrayAdapter<String>(it,
+                    android.R.layout.simple_spinner_item, genreList!!)
+            genreSpinnerAdapter.setDropDownViewResource(android.R.layout
+                    .simple_spinner_dropdown_item)
+            spinnerGenre.adapter = genreSpinnerAdapter
+
+            val sortingSpinnerAdapter = ArrayAdapter<String>(it,
+                    android.R.layout.simple_spinner_item,
+                    ArrayList<String>(sortingOptions!!.values))
+            sortingSpinnerAdapter.setDropDownViewResource(android.R.layout
+                    .simple_spinner_dropdown_item)
+            spinnerSortBy.adapter = sortingSpinnerAdapter
+        } ?: return
+
         recycler.addOnScrollListener(object :
                 ContinuousScrollListener(recycler.layoutManager as LinearLayoutManager) {
             override fun onLoadMore() {
                 if(!searchPresenter.isSearching()) {
                     lastPageNumber++
-                    searchPresenter.performSearch(lastSearched, lastPageNumber)
+                    performSearch(lastSearched, lastPageNumber)
                 }
             }
         })
-        searchPresenter.performSearch(lastSearched, lastPageNumber)
+
+        tvProgress.setOnClickListener { performSearch(lastSearched, lastPageNumber) }
+
+        performSearch(lastSearched, lastPageNumber)
+    }
+
+    private val onSpinnerItemSelected = object: AdapterView.OnItemSelectedListener{
+        override fun onItemSelected(parent: AdapterView<*>?,
+                                    view: View?, position: Int, id: Long) {
+            lastPageNumber = 1
+            performSearch(lastSearched, lastPageNumber)
+        }
+        override fun onNothingSelected(parent: AdapterView<*>?) {}
+    }
+
+    private fun performSearch(query: String, pageNumber: Int) {
+        var sortBy = ""
+        var genre = ""
+        sortingOptions?.let { map ->
+            if(map.size > 0) {
+                if(spinnerSortBy.selectedItemPosition != AdapterView.INVALID_POSITION) {
+                    sortBy = ArrayList<String>(map.keys)[spinnerSortBy.selectedItemPosition]
+                }
+            }
+        }
+        genreList?.let { list ->
+            if(spinnerGenre.selectedItemPosition != AdapterView.INVALID_POSITION) {
+                genre = list[spinnerGenre.selectedItemPosition]
+            }
+        }
+        searchPresenter.performSearch(query, pageNumber, sortBy, genre)
     }
 
     override fun onDestroyView() {
@@ -119,6 +174,9 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     override fun onSearchResults(movies: ArrayList<Movie>) {
         hideProgress()
+        spinnerGenre.onItemSelectedListener = onSpinnerItemSelected
+        spinnerSortBy.onItemSelectedListener = onSpinnerItemSelected
+
         if(lastPageNumber == 1) {
             adapter = MoviesListAdapter(movies, onMovieItemClickListener)
             recycler.adapter = adapter
@@ -153,7 +211,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
         if ((visibleItemCount + pastVisibleItemsCount) >= totalItemCount) {
             lastPageNumber = 2
-            searchPresenter.performSearch(lastSearched, lastPageNumber)
+            performSearch(lastSearched, lastPageNumber)
         }
     }
 

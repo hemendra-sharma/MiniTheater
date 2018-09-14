@@ -27,4 +27,10 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
+    <style name="SpinnerTheme" parent="AppTheme">
+        <item name="android:textSize">@dimen/textSize14</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:padding">5dp</item>
+    </style>
+
 </resources>

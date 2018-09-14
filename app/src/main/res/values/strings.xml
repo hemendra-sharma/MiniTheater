@@ -35,4 +35,6 @@
     <string name="_0_kb_s">0 KB/s</string>
     <string name="quality_720p">Quality: 720p</string>
     <string name="subtitles">Subtitles</string>
+    <string name="genre">Genre</string>
+    <string name="sort_by">Sort By</string>
 </resources>

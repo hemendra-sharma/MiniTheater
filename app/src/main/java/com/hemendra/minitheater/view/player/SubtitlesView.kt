@@ -37,6 +37,7 @@ class SubtitlesView: TextView, Runnable {
 
     private fun loadItems() {
         try {
+            items.clear()
             val input = FileInputStream(subtitlesFile)
             val reader = LineNumberReader(InputStreamReader(input))
             reader.readLine() // read number
@@ -49,9 +50,14 @@ class SubtitlesView: TextView, Runnable {
                     sb.append(line).append("\n")
                     line = reader.readLine()
                 }
-                val startTime = parseTime(timeString.split("-->")[0])
-                val endTime = parseTime(timeString.split("-->")[1])
-                items.add(Line(startTime, endTime, sb.toString()))
+
+                if(timeString.contains("-->")) {
+                    val startTime = parseTime(timeString.split("-->")[0])
+                    val endTime = parseTime(timeString.split("-->")[1])
+
+                    if (startTime > 0 && endTime > 0)
+                        items.add(Line(startTime, endTime, sb.toString()))
+                }
 
                 reader.readLine() // read number
                 line = reader.readLine()
@@ -62,12 +68,17 @@ class SubtitlesView: TextView, Runnable {
     }
 
     private fun parseTime(time: String): Long {
-        val hours = java.lang.Long.parseLong(time.split(":")[0].trim())
-        val minutes = java.lang.Long.parseLong(time.split(":")[1].trim())
-        val seconds = java.lang.Long.parseLong(time.split(":")[2].split(",")[0].trim())
-        val millis = java.lang.Long.parseLong(time.split(":")[2].split(",")[1].trim())
+        return try {
+            val hours = java.lang.Long.parseLong(time.split(":")[0].trim())
+            val minutes = java.lang.Long.parseLong(time.split(":")[1].trim())
+            val seconds = java.lang.Long.parseLong(time.split(":")[2].split(",")[0].trim())
+            val millis = java.lang.Long.parseLong(time.split(":")[2].split(",")[1].trim())
 
-        return hours * 60 * 60 * 1000 + minutes * 60 * 1000 + seconds * 1000 + millis
+            hours * 60 * 60 * 1000 + minutes * 60 * 1000 + seconds * 1000 + millis
+        } catch(e: NumberFormatException) {
+            e.printStackTrace()
+            0
+        }
     }
 
     private fun getTimedText(position: Long): String {

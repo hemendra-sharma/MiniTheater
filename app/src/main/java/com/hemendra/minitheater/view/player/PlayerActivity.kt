@@ -80,42 +80,47 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
         surfaceView.holder.addCallback(this)
         llHolder.setOnTouchListener(this)
-        ivSubtitles.setOnClickListener {
-            if(rlSubtitles.visibility == View.VISIBLE)
+        ivSubtitles.setOnClickListener { _ ->
+            if(rlSubtitles.visibility == View.VISIBLE) {
                 rlSubtitles.visibility = View.GONE
-            else
+            } else {
                 rlSubtitles.visibility = View.VISIBLE
+                mediaController?.hide()
+                tvDownloadInfo.visibility = View.GONE
+                if(pbSubtitles.visibility == View.VISIBLE) {
+                    movie?.let {
+                        SubtitlesPresenter.getInstance().getSubtitlesList(it,
+                                object: SubtitlesListDownloadListener {
+                                    override fun onListDownloaded(subtitlesList: ArrayList<Subtitle>) {
+                                        subtitlesAdapter =
+                                                SubtitlesListAdapter(applicationContext, subtitlesList)
+                                        lvSubtitles.adapter = subtitlesAdapter
+                                        pbSubtitles.visibility = View.GONE
+                                    }
+                                    override fun onFailedToDownloadList() {
+                                        pbSubtitles.visibility = View.GONE
+                                    }
+                                })
+                    }
+                }
+            }
         }
 
         lvSubtitles.onItemClickListener = listItemClickListener
 
-        movie?.let {
-            SubtitlesPresenter.getInstance().getSubtitlesList(it,
-                    object: SubtitlesListDownloadListener {
-                        override fun onListDownloaded(subtitlesList: ArrayList<Subtitle>) {
-                            subtitlesAdapter =
-                                    SubtitlesListAdapter(applicationContext, subtitlesList)
-                            lvSubtitles.adapter = subtitlesAdapter
-                            pbSubtitles.visibility = View.GONE
-                        }
-                        override fun onFailedToDownloadList() {
-                            pbSubtitles.visibility = View.GONE
-                            rlSubtitles.visibility = View.GONE
-                        }
-                    })
-        }
-
         clickDetector = GestureDetector(this,
                 object : GestureDetector.SimpleOnGestureListener() {
                     override fun onSingleTapUp(e: MotionEvent): Boolean {
-                        val visible = (window.decorView.systemUiVisibility
-                                and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION == 0)
-                        if (visible) {
+                        if (mediaController?.isShowing == true) {
                             hideSystemUI()
                             mediaController?.hide()
+                            ivSubtitles.visibility = View.GONE
+                            tvDownloadInfo.visibility = View.GONE
                         } else {
                             showSystemUI()
-                            mediaController?.show()
+                            mediaController?.show(0)
+                            ivSubtitles.visibility = View.VISIBLE
+                            tvDownloadInfo.visibility = View.VISIBLE
                         }
                         rlSubtitles.visibility = View.GONE
                         return true
@@ -145,6 +150,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         _, _, position, _ ->
         subtitlesAdapter?.let {
             rlSubtitles.visibility = View.GONE
+            ivSubtitles.visibility = View.GONE
             val subtitle = it.getItem(position)
             Toast.makeText(applicationContext, "Downloading Subtitles...",
                     Toast.LENGTH_SHORT).show()
@@ -209,25 +215,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         return false
     }
 
-    private val mHideHandler = Handler(Handler.Callback {
-        hideSystemUI()
-        true
-    })
-
-    private fun delayedHideSystemUI(delayMillis: Long) {
-        mHideHandler.removeMessages(0)
-        mHideHandler.sendEmptyMessageDelayed(0, delayMillis)
-    }
-
-    /*override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            delayedHideSystemUI(1000)
-        } else {
-            mHideHandler.removeMessages(0)
-        }
-    }*/
-
     private val downloadReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
@@ -240,7 +227,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
     private fun updateProgress(m: Movie) {
         tvDownloadInfo.text = String.format(Locale.getDefault(),
                 "Downloaded %.2f%%", m.downloadProgress * 100f)
-        tvDownloadInfo.visibility = View.VISIBLE
 
         if(rlProgress.visibility == View.VISIBLE) {
             if(activityShowing) {
@@ -314,13 +300,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                 mediaController?.setMediaPlayer(this)
                 mediaController?.setAnchorView(llHolder)
                 mediaController?.isEnabled = true
-                mediaController?.systemUiVisibility = (
-                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                                or View.SYSTEM_UI_FLAG_LOW_PROFILE
-                                or View.SYSTEM_UI_FLAG_IMMERSIVE)
             }
         }
     }

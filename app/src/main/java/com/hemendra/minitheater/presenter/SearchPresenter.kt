@@ -15,7 +15,7 @@ class SearchPresenter(private var explorer: IExplorerFragment):
     private var destroyed = false
     private val moviesDataSource: IMoviesDataSource = MoviesDataSource(this)
 
-    override fun performSearch(query: String, pageNumber: Int) {
+    override fun performSearch(query: String, pageNumber: Int, sortBy: String, genre: String) {
         abort() // abort any previous ongoing process
         if(destroyed) return
 
@@ -24,7 +24,7 @@ class SearchPresenter(private var explorer: IExplorerFragment):
             explorer.onSearchFailed(MoviesDataSourceFailureReason.NO_INTERNET_CONNECTION)
             return
         }
-        moviesDataSource.searchMovies(query, pageNumber)
+        moviesDataSource.searchMovies(query, pageNumber, sortBy, genre)
         if(query.isEmpty())
             explorer.onSearchStarted("")
         else

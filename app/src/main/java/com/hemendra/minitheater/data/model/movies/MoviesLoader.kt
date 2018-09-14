@@ -32,8 +32,12 @@ class MoviesLoader(private var listener: OnMoviesLoadedListener):
     override fun doInBackground(vararg params: Any): ArrayList<Movie>? {
         if(Looper.myLooper() == null) Looper.prepare()
 
-        val url: String = RemoteConfig.getInstance()
-                .getMovieSearchURL(params[0] as String, params[1] as Int)
+        val query = params[0] as String
+        val pageNumber = params[1] as Int
+        val sortBy = params[2] as String
+        val genre = params[3] as String
+
+        val url: String = RemoteConfig.getInstance().getMovieSearchURL(query, pageNumber, sortBy, genre)
         val stream: InputStream = ContentDownloader.getInputStream(url, object: ConnectionCallback{
 
             override fun onConnectionInitialized(conn: HttpURLConnection) {
