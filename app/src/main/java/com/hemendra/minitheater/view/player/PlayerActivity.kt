@@ -247,15 +247,18 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
     }
 
     private fun updateProgress(m: Movie) {
-        val percentage = m.downloadProgress * 100f
+        val downloadProgress = m.downloadProgress * 100f
         tvDownloadInfo.text = String.format(Locale.getDefault(),
-                "Downloaded %.2f%%", percentage)
+                "Downloaded %.2f%%", downloadProgress)
+        tryResettingMediaPlayer(downloadProgress)
+    }
 
-        var max = Math.round((duration * (percentage / 100f)) - 120000f)
+    private fun tryResettingMediaPlayer(downloadProgress: Float) {
+        var max = Math.round((duration * (downloadProgress / 100f)) - 120000f)
         if (max < 0) max = 0
 
         if(rlProgress.visibility == View.VISIBLE
-            && max > mediaPlayer?.currentPosition ?: 0) {
+                && max > mediaPlayer?.currentPosition ?: 0) {
             if(activityShowing) {
                 destroyMediaPlayerAndStopServer()
                 Handler().postDelayed({ startMediaPlayerAndServer() }, 500)
@@ -318,7 +321,9 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         }catch (e: IOException) {
             e.printStackTrace()
             mediaPlayer = null
+            destroyMediaPlayerAndStopServer()
             handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
+            return
         }
 
         if(mediaController == null) {
@@ -361,8 +366,12 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                         "| MEDIA_INFO_VIDEO_NOT_PLAYING " +
                         "| MEDIA_INFO_BAD_INTERLEAVING " +
                         "| MEDIA_INFO_NETWORK_BANDWIDTH : $what")
-                mediaPlayer?.stop()
-                rlProgress.visibility = View.VISIBLE
+                if(DownloaderService.isDownloadingMovie(movie)) {
+                    mediaPlayer?.stop()
+                    rlProgress.visibility = View.VISIBLE
+                } else {
+                    tryResettingMediaPlayer(movie?.downloadProgress ?: 0f)
+                }
             }
             MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
                 sb.append("MEDIA_INFO_VIDEO_RENDERING_START")
@@ -438,8 +447,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
             MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> sb.append("MEDIA_ERROR_UNSUPPORTED")
             -38 -> {
                 sb.append("what : $what | extra: $extra")
-                destroyMediaPlayerAndStopServer()
-                Handler().postDelayed({ startMediaPlayerAndServer() }, 500)
+                tryResettingMediaPlayer(movie?.downloadProgress ?: 0f)
             }
             else -> sb.append("what : $what | extra: $extra")
         }

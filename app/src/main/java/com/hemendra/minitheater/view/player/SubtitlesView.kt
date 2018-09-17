@@ -47,7 +47,7 @@ class SubtitlesView: TextView, Runnable {
                 val sb = StringBuilder()
                 line = reader.readLine()
                 while (line != null && !line.isEmpty()) {
-                    sb.append(line).append("\n")
+                    sb.append(line).append("<br>")
                     line = reader.readLine()
                 }
 

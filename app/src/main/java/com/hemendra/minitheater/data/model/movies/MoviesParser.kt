@@ -2,6 +2,7 @@ package com.hemendra.minitheater.data.model.movies
 
 import android.util.JsonReader
 import android.util.JsonToken
+import android.util.MalformedJsonException
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.Torrent
 import org.json.JSONException
@@ -14,8 +15,9 @@ class MoviesParser {
 
         fun parseStream(stream: InputStream): ArrayList<Movie> {
             val movies: ArrayList<Movie> = ArrayList()
+            var reader: JsonReader? = null
             try {
-                val reader = JsonReader(InputStreamReader(stream))
+                reader = JsonReader(InputStreamReader(stream))
                 reader.beginObject()
                 while(reader.hasNext()) {
                     if(reader.peek() == JsonToken.NULL) {
@@ -52,11 +54,14 @@ class MoviesParser {
                     }
                 }
                 reader.endObject()
-                reader.close()
             } catch(e: RuntimeException) {
                 e.printStackTrace()
             } catch (e: JSONException) {
                 e.printStackTrace()
+            } catch (e: MalformedJsonException) {
+                e.printStackTrace()
+            } finally {
+                reader?.close()
             }
             return movies
         }

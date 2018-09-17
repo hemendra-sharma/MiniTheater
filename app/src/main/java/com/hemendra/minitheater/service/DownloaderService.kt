@@ -32,6 +32,7 @@ import android.app.NotificationManager
 import android.annotation.TargetApi
 import android.appwidget.AppWidgetManager
 import android.os.Build
+import android.os.Handler
 import com.hemendra.minitheater.presenter.DownloadsPresenter
 
 class DownloaderService: Service(), TorrentSessionListener {
@@ -59,9 +60,13 @@ class DownloaderService: Service(), TorrentSessionListener {
         val EXTRA_MOVIE = "movie"
 
         var isRunning = false
+        var movie: Movie? = null
+
+        fun isDownloadingMovie(m: Movie?): Boolean {
+            return isRunning && movie != null && m != null && movie?.id == m?.id
+        }
     }
 
-    private var movie: Movie? = null
     private var torrentSession: TorrentSession? = null
     private var notificationView: RemoteViews? = null
 
@@ -145,6 +150,8 @@ class DownloaderService: Service(), TorrentSessionListener {
                 torrentSession?.start(this, torrentUri)
             }).start()
 
+            broadcastSpeed()
+
             return true
         }
         return false
@@ -214,7 +221,10 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     override fun onDestroy() {
         localBroadcastManager?.unregisterReceiver(commandReceiver)
-        torrentSession?.stop()
+        Thread(Runnable {
+            torrentSession?.pause()
+            torrentSession?.stop()
+        }).start()
         stopForeground(true)
         movie?.let { m ->
             val intent = Intent(ACTION_DOWNLOAD_STOPPED)
@@ -227,8 +237,9 @@ class DownloaderService: Service(), TorrentSessionListener {
             localBroadcastManager?.sendBroadcast(intent)
             DownloadsPresenter.getInstance().updateDownloadProgress(m)
         }
-        super.onDestroy()
+        movie = null
         isRunning = false
+        super.onDestroy()
     }
 
     private fun getNotification(): Notification? {
@@ -306,6 +317,8 @@ class DownloaderService: Service(), TorrentSessionListener {
             it.isPaused = false
             DownloadsPresenter.getInstance().updateDownloadProgress(it)
         }
+
+        stopSelf()
     }
 
     private fun onDownloadFailed(reason: TorrentFailureReason) {
@@ -324,6 +337,19 @@ class DownloaderService: Service(), TorrentSessionListener {
         }
     }
 
+    private fun broadcastSpeed() {
+        movie?.let { m ->
+            m.downloadSpeed = torrentSession?.downloadRate ?: 0
+            m.uploadSpeed = torrentSession?.uploadRate ?: 0
+
+            val intent = Intent(ACTION_PROGRESS_UPDATE)
+            intent.putExtra(EXTRA_MOVIE, m)
+            localBroadcastManager?.sendBroadcast(intent)
+
+            Handler().postDelayed(this::broadcastSpeed, 1000)
+        }
+    }
+
     private fun publishProgress(torrentSessionStatus: TorrentSessionStatus) {
         val speed = torrentSessionStatus.downloadRate
         val seeds = torrentSessionStatus.seederCount
@@ -335,22 +361,27 @@ class DownloaderService: Service(), TorrentSessionListener {
                 " wanted: ${torrentSessionStatus.bytesWanted}")
 
         movie?.let { m ->
-            m.downloadProgress = progress
-            m.downloadSeeds = seeds
-            m.downloadSpeed = speed
-            m.uploadSpeed = upSpeed
+            if(m.downloadProgress >= 1f) {
+                onDownloadFinished()
+                showFinishedNotification()
+            } else {
+                m.downloadProgress = progress
+                m.downloadSeeds = seeds
+                m.downloadSpeed = speed.toLong()
+                m.uploadSpeed = upSpeed.toLong()
 
-            val intent = Intent(ACTION_PROGRESS_UPDATE)
-            intent.putExtra(EXTRA_MOVIE, m)
-            localBroadcastManager?.sendBroadcast(intent)
+                val intent = Intent(ACTION_PROGRESS_UPDATE)
+                intent.putExtra(EXTRA_MOVIE, m)
+                localBroadcastManager?.sendBroadcast(intent)
 
-            DownloadsPresenter.getInstance().updateDownloadProgress(m)
+                DownloadsPresenter.getInstance().updateDownloadProgress(m)
+
+                val str = String.format(Locale.getDefault(), "%.2f%%, %d Seeds, D: %.2f KB/s, U: %.2f KB/s",
+                        progress * 100f, seeds, (speed.toFloat()/1024), (upSpeed.toFloat()/1024))
+                notificationView?.setTextViewText(R.id.tvInfo, str)
+                notificationManager?.notify(NOTIFICATION_ID, builder?.build())
+            }
         }
-        val str = String.format(Locale.getDefault(), "%.2f%%, %d Seeds, D: %.2f KB/s, U: %.2f KB/s",
-                progress * 100f, seeds, (speed.toFloat()/1024), (upSpeed.toFloat()/1024))
-        notificationView?.setTextViewText(R.id.tvInfo, str)
-
-        notificationManager?.notify(NOTIFICATION_ID, builder?.build())
     }
 
     private fun showPausedNotification() {
@@ -401,6 +432,7 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     override fun onAddTorrent(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onAddTorrent")
+        torrentHandle.resume()
     }
 
     override fun onBlockUploaded(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
@@ -448,6 +480,10 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     override fun onTorrentPaused(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentPaused")
+        if(torrentHandle.needSaveResumeData()) {
+            torrentHandle.saveResumeData()
+            Log.d("service", "======================== saveResumeData")
+        }
     }
 
     override fun onTorrentRemoved(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {

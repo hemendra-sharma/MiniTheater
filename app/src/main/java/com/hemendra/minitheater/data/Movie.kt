@@ -40,8 +40,8 @@ class Movie: Serializable {
 
     var downloadProgress: Float = 0f
     var downloadSeeds: Int = 0
-    var downloadSpeed: Int = 0
-    var uploadSpeed: Int = 0
+    var downloadSpeed: Long = 0
+    var uploadSpeed: Long = 0
     var downloadComplete: Boolean = false
 
     fun clone(): Movie {

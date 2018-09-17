@@ -80,7 +80,12 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
 
         var status = ""
         if(m.isDownloading && m.isPaused) status = "(Paused)"
-        else if(!m.isDownloading) status = "(Stopped)"
+        else if(!m.isDownloading) {
+            if(m.downloadProgress >= 1f)
+                status = "(Finished)"
+            else
+                status = "(Stopped)"
+        }
 
         tvSpeed.text = String.format(Locale.getDefault(),
                 "D: %.1f KB/s, U: %.1f KB/s %s",
