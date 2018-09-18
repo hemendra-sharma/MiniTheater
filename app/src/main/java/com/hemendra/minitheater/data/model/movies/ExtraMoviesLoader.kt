@@ -8,10 +8,9 @@ import com.hemendra.minitheater.utils.ConnectionCallback
 import com.hemendra.minitheater.utils.ContentDownloader
 import com.hemendra.minitheater.utils.CustomAsyncTask
 import com.hemendra.minitheater.utils.RemoteConfig
-import java.io.InputStream
 import java.net.HttpURLConnection
 
-class MoviesLoader(private var listener: OnMoviesLoadedListener):
+class ExtraMoviesLoader(private var listener: OnMoviesLoadedListener):
         CustomAsyncTask<Any, Void, ArrayList<Movie>?>() {
 
     private var connection: HttpURLConnection? = null
@@ -34,11 +33,9 @@ class MoviesLoader(private var listener: OnMoviesLoadedListener):
 
         val query = params[0] as String
         val pageNumber = params[1] as Int
-        val sortBy = params[2] as String
-        val genre = params[3] as String
 
-        val url: String = RemoteConfig.getInstance().getMovieSearchURL(query, pageNumber, sortBy, genre)
-        val stream: InputStream? = ContentDownloader.getInputStream(url, object: ConnectionCallback{
+        val url: String = RemoteConfig.getInstance().getExtraMovieSearchURL(query, pageNumber)
+        val html: String? = ContentDownloader.getString(url, object: ConnectionCallback{
 
             override fun onConnectionInitialized(conn: HttpURLConnection) {
                 connection = conn
@@ -66,13 +63,14 @@ class MoviesLoader(private var listener: OnMoviesLoadedListener):
             return null
         }
 
-        stream?.let {
-            val movies = MoviesParser.parseStream(it)
-            if (isCancelled) {
-                reason = MoviesDataSourceFailureReason.ABORTED
-                return null
-            }
-            return movies
+        if(isCancelled) {
+            reason = MoviesDataSourceFailureReason.ABORTED
+            return null
+        }
+
+        html?.let {
+            reason = MoviesDataSourceFailureReason.NO_SEARCH_RESULTS
+            return ExtraMoviesScrapper.moviesHtmlToList(it)
         } ?: return null
     }
 

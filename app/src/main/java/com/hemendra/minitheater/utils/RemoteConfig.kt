@@ -53,6 +53,12 @@ class RemoteConfig private constructor() {
     private var magnetReplaceHash: String = ""
     private var magnetReplaceMovieName: String = ""
 
+    private var extraMovieSearchURL: String = ""
+    private var extraMovieQueryParam: String = ""
+    private var extraMoviePageParam: String = ""
+    private var extraMovieRedirectReplace: String = ""
+    private var extraMovieRedirectReplaceWith: String = ""
+
     private var listener: OnCompleteListener<QuerySnapshot> = OnCompleteListener {
         if(it.isSuccessful) {
             for(document in it.result) {
@@ -90,6 +96,15 @@ class RemoteConfig private constructor() {
                         magnetURL = document["magnet_url"] as String
                         magnetReplaceHash = document["hash_replace"] as String
                         magnetReplaceMovieName = document["movie_name_replace"] as String
+                    }
+                    "extra_movies" -> {
+                        extraMovieSearchURL = document["extra_movies_search_url"] as String
+                        extraMovieQueryParam = document["extra_movies_query_param"] as String
+                        extraMoviePageParam = document["extra_movies_page_param"] as String
+                        extraMovieRedirectReplace =
+                                document["extra_movies_redirect_replace"] as String
+                        extraMovieRedirectReplaceWith =
+                                document["extra_movies_redirect_replace_with"] as String
                     }
                 }
             }
@@ -134,6 +149,22 @@ class RemoteConfig private constructor() {
         return sb.toString()
     }
 
+    fun getExtraMovieSearchURL(query: String, pageNumber: Int): String {
+        if(!isInitialized) throw(IllegalStateException("Initialization not completed yet !"))
+
+        val encQuery = URLEncoder.encode(query, "UTF-8")
+
+        return extraMovieSearchURL.replace(extraMovieQueryParam, encQuery)
+                .replace(extraMoviePageParam, pageNumber.toString())
+    }
+
+    fun getExtraMovieRedirectUrl(url: String): String {
+        return if(url.contains(extraMovieRedirectReplace))
+            url.replace(extraMovieRedirectReplace, extraMovieRedirectReplaceWith)
+        else
+            extraMovieRedirectReplaceWith + url
+    }
+
     fun getConvertedImageURL(url: String): String {
         if(!isInitialized) throw(IllegalStateException("Initialization not completed yet !"))
 
@@ -152,11 +183,15 @@ class RemoteConfig private constructor() {
 
         assert(movie.torrents.size == 1)
 
-        val torrentHash = movie.torrents[0].hash
-        val movieName = URLEncoder.encode(movie.title, "UTF-8")
+        if(movie.torrents[0].url.startsWith("magnet:")) {
+            return movie.torrents[0].url
+        } else {
+            val torrentHash = movie.torrents[0].hash
+            val movieName = URLEncoder.encode(movie.title, "UTF-8")
 
-        return magnetURL.replace(magnetReplaceHash, torrentHash)
-                .replace(magnetReplaceMovieName, movieName)
+            return magnetURL.replace(magnetReplaceHash, torrentHash)
+                    .replace(magnetReplaceMovieName, movieName)
+        }
     }
 
     fun getGenreOptions(): ArrayList<String> {

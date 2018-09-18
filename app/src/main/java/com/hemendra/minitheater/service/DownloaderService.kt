@@ -1,14 +1,15 @@
 package com.hemendra.minitheater.service
 
-import android.app.Notification
-import android.app.PendingIntent
-import android.app.Service
+import android.annotation.TargetApi
+import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.os.Handler
 import android.os.IBinder
 import android.support.v4.app.NotificationCompat
 import android.support.v4.content.LocalBroadcastManager
@@ -18,6 +19,8 @@ import com.frostwire.jlibtorrent.TorrentHandle
 import com.frostwire.jlibtorrent.TorrentStatus
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
+import com.hemendra.minitheater.data.MovieObjectType
+import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.utils.RemoteConfig
 import com.hemendra.minitheater.utils.Utils
 import com.hemendra.minitheater.view.MainActivity
@@ -27,43 +30,35 @@ import com.masterwok.simpletorrentandroid.contracts.TorrentSessionListener
 import com.masterwok.simpletorrentandroid.models.TorrentSessionStatus
 import java.io.File
 import java.util.*
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.annotation.TargetApi
-import android.appwidget.AppWidgetManager
-import android.os.Build
-import android.os.Handler
-import com.hemendra.minitheater.presenter.DownloadsPresenter
 
 class DownloaderService: Service(), TorrentSessionListener {
-
-    private val NOTIFICATION_ID = 1001
-    private val PAUSE_ACTION = 1002
-    private val STOP_ACTION = 1003
-    private val NOTIFICATION_CHANNEL_ID = "MovieDownloads"
 
     private var localBroadcastManager: LocalBroadcastManager? = null
     private var notificationManager: NotificationManager? = null
     private var builder: NotificationCompat.Builder? = null
 
     companion object {
-        val ACTION_STOP_DOWNLOAD = "com.hemendra.minitheater.ACTION_STOP_DOWNLOAD"
+        private const val NOTIFICATION_ID = 1001
+        private const val PAUSE_ACTION = 1002
+        private const val STOP_ACTION = 1003
+        private const val NOTIFICATION_CHANNEL_ID = "MovieDownloads"
 
-        val ACTION_PROGRESS_UPDATE = "com.hemendra.minitheater.ACTION_PROGRESS_UPDATE"
-        val ACTION_DOWNLOAD_FAILED = "com.hemendra.minitheater.ACTION_DOWNLOAD_FAILED"
-        val ACTION_DOWNLOAD_COMPLETE = "com.hemendra.minitheater.ACTION_DOWNLOAD_COMPLETE"
-        val ACTION_DOWNLOAD_PAUSED = "com.hemendra.minitheater.ACTION_DOWNLOAD_PAUSED"
-        val ACTION_DOWNLOAD_RESUMED = "com.hemendra.minitheater.ACTION_DOWNLOAD_RESUMED"
-        val ACTION_DOWNLOAD_STOPPED = "com.hemendra.minitheater.ACTION_DOWNLOAD_STOPPED"
+        const val ACTION_STOP_DOWNLOAD = "com.hemendra.minitheater.ACTION_STOP_DOWNLOAD"
+        const val ACTION_PROGRESS_UPDATE = "com.hemendra.minitheater.ACTION_PROGRESS_UPDATE"
+        const val ACTION_DOWNLOAD_FAILED = "com.hemendra.minitheater.ACTION_DOWNLOAD_FAILED"
+        const val ACTION_DOWNLOAD_COMPLETE = "com.hemendra.minitheater.ACTION_DOWNLOAD_COMPLETE"
+        const val ACTION_DOWNLOAD_PAUSED = "com.hemendra.minitheater.ACTION_DOWNLOAD_PAUSED"
+        const val ACTION_DOWNLOAD_RESUMED = "com.hemendra.minitheater.ACTION_DOWNLOAD_RESUMED"
+        const val ACTION_DOWNLOAD_STOPPED = "com.hemendra.minitheater.ACTION_DOWNLOAD_STOPPED"
 
-        val EXTRA_FAILURE_REASON = "reason"
-        val EXTRA_MOVIE = "movie"
+        const val EXTRA_FAILURE_REASON = "reason"
+        const val EXTRA_MOVIE = "movie"
 
         var isRunning = false
         var movie: Movie? = null
 
         fun isDownloadingMovie(m: Movie?): Boolean {
-            return isRunning && movie != null && m != null && movie?.id == m?.id
+            return isRunning && movie != null && m != null && movie?.id == m.id
         }
     }
 
@@ -136,10 +131,11 @@ class DownloaderService: Service(), TorrentSessionListener {
             Log.d("service", "url: $url")
             val torrentUri = Uri.parse(url)
             val torrentSessionOptions = TorrentSessionOptions(
-                    downloadLocation = savingDirectory
-                    , onlyDownloadLargestFile = true
-                    , enableLogging = false
-                    , shouldStream = true)
+                    downloadLocation = savingDirectory,
+                    onlyDownloadLargestFile = true,
+                    enableLogging = false,
+                    shouldStream = true,
+                    anonymousMode = true)
 
             torrentSession?.stop()
 
@@ -376,7 +372,8 @@ class DownloaderService: Service(), TorrentSessionListener {
 
                 DownloadsPresenter.getInstance().updateDownloadProgress(m)
 
-                val str = String.format(Locale.getDefault(), "%.2f%%, %d Seeds, D: %.2f KB/s, U: %.2f KB/s",
+                val str = String.format(Locale.getDefault(),
+                        "%.2f%%, %d Seeds, D: %.2f KB/s, U: %.2f KB/s",
                         progress * 100f, seeds, (speed.toFloat()/1024), (upSpeed.toFloat()/1024))
                 notificationView?.setTextViewText(R.id.tvInfo, str)
                 notificationManager?.notify(NOTIFICATION_ID, builder?.build())
@@ -386,7 +383,8 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     private fun showPausedNotification() {
         val progress = movie?.downloadProgress ?: 0f
-        val str = String.format(Locale.getDefault(), "Downloaded %.2f%% (Paused)", (progress * 100f))
+        val str = String.format(Locale.getDefault(),
+                "Downloaded %.2f%% (Paused)", (progress * 100f))
         notificationView?.setTextViewText(R.id.tvInfo, str)
         notificationManager?.notify(NOTIFICATION_ID, builder?.build())
 
@@ -430,24 +428,40 @@ class DownloaderService: Service(), TorrentSessionListener {
         notificationManager?.notify(NOTIFICATION_ID, builder?.build())
     }
 
-    override fun onAddTorrent(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onAddTorrent(torrentHandle: TorrentHandle,
+                              torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onAddTorrent")
-        torrentHandle.resume()
     }
 
-    override fun onBlockUploaded(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onBlockUploaded(torrentHandle: TorrentHandle,
+                                 torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onBlockUploaded")
     }
 
-    override fun onMetadataFailed(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onMetadataFailed(torrentHandle: TorrentHandle,
+                                  torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onMetadataFailed")
     }
 
-    override fun onMetadataReceived(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
-        Log.d("service", "onMetadataReceived")
+    override fun onMetadataReceived(torrentHandle: TorrentHandle,
+                                    torrentSessionStatus: TorrentSessionStatus) {
+        Log.d("service", "onMetadataReceived- 1")
+        movie?.let { m ->
+            Log.d("service", "onMetadataReceived - 2")
+            if(m.movieObjectType == MovieObjectType.EXTRA) {
+                Log.d("service", "onMetadataReceived - 3")
+                val totalSize = torrentHandle.torrentFile().totalSize()
+                val totalSizeMB = totalSize.toDouble() / 1024f / 1024f
+                m.torrents[0].size = String.format(Locale.getDefault(), "%.2f", totalSizeMB)
+                m.torrents[0].size_bytes = totalSize
+                publishProgress(torrentSessionStatus)
+                Log.d("service", "totalSize: $totalSize | totalSizeMB: $totalSizeMB")
+            }
+        }
     }
 
-    override fun onPieceFinished(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onPieceFinished(torrentHandle: TorrentHandle,
+                                 torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onPieceFinished")
         if(torrentHandle.needSaveResumeData()) {
             torrentHandle.saveResumeData()
@@ -456,21 +470,25 @@ class DownloaderService: Service(), TorrentSessionListener {
         publishProgress(torrentSessionStatus)
     }
 
-    override fun onTorrentDeleteFailed(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onTorrentDeleteFailed(torrentHandle: TorrentHandle,
+                                       torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentDeleteFailed")
     }
 
-    override fun onTorrentDeleted(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onTorrentDeleted(torrentHandle: TorrentHandle,
+                                  torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentDeleted")
     }
 
-    override fun onTorrentError(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onTorrentError(torrentHandle: TorrentHandle,
+                                torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentError")
         onDownloadFailed(TorrentFailureReason.UNKNOWN)
         showErrorNotification()
     }
 
-    override fun onTorrentFinished(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onTorrentFinished(torrentHandle: TorrentHandle,
+                                   torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentFinished : state: ${torrentSessionStatus.state}")
         if(torrentSessionStatus.state == TorrentStatus.State.FINISHED) {
             onDownloadFinished()
@@ -478,7 +496,8 @@ class DownloaderService: Service(), TorrentSessionListener {
         }
     }
 
-    override fun onTorrentPaused(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onTorrentPaused(torrentHandle: TorrentHandle,
+                                 torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentPaused")
         if(torrentHandle.needSaveResumeData()) {
             torrentHandle.saveResumeData()
@@ -486,11 +505,13 @@ class DownloaderService: Service(), TorrentSessionListener {
         }
     }
 
-    override fun onTorrentRemoved(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onTorrentRemoved(torrentHandle: TorrentHandle,
+                                  torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentRemoved")
     }
 
-    override fun onTorrentResumed(torrentHandle: TorrentHandle, torrentSessionStatus: TorrentSessionStatus) {
+    override fun onTorrentResumed(torrentHandle: TorrentHandle,
+                                  torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onTorrentResumed")
     }
 }

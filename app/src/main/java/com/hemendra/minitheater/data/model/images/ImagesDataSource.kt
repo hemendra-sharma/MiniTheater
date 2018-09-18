@@ -14,8 +14,11 @@ class ImagesDataSource(context: Context) : IImagesDataSource, IImageLoaderListen
         downloadPool.newDownload(ImageLoader(db, url, callback, this))
     }
 
-    override fun close() {
+    override fun abortAll() {
         downloadPool.abortAllDownloads()
+    }
+
+    override fun close() {
         db.close()
     }
 

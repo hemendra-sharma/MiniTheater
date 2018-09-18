@@ -20,6 +20,7 @@ import android.widget.MediaController
 import android.widget.Toast
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
+import com.hemendra.minitheater.data.MovieObjectType
 import com.hemendra.minitheater.data.Subtitle
 import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.presenter.SubtitlesPresenter
@@ -78,30 +79,35 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
         surfaceView.holder.addCallback(this)
         llHolder.setOnTouchListener(this)
-        ivSubtitles.setOnClickListener { _ ->
-            if(rlSubtitles.visibility == View.VISIBLE) {
-                rlSubtitles.visibility = View.GONE
-            } else {
-                rlSubtitles.visibility = View.VISIBLE
-                mediaController?.hide()
-                tvDownloadInfo.visibility = View.GONE
-                if(pbSubtitles.visibility == View.VISIBLE) {
-                    movie?.let {
-                        SubtitlesPresenter.getInstance().getSubtitlesList(it,
-                                object: SubtitlesListDownloadListener {
-                                    override fun onListDownloaded(subtitlesList: ArrayList<Subtitle>) {
-                                        subtitlesAdapter =
-                                                SubtitlesListAdapter(applicationContext, subtitlesList)
-                                        lvSubtitles.adapter = subtitlesAdapter
-                                        pbSubtitles.visibility = View.GONE
-                                    }
-                                    override fun onFailedToDownloadList() {
-                                        pbSubtitles.visibility = View.VISIBLE
-                                    }
-                                })
+        if(movie?.movieObjectType == MovieObjectType.DEFAULT) {
+            ivSubtitles.setOnClickListener { _ ->
+                if (rlSubtitles.visibility == View.VISIBLE) {
+                    rlSubtitles.visibility = View.GONE
+                } else {
+                    rlSubtitles.visibility = View.VISIBLE
+                    mediaController?.hide()
+                    tvDownloadInfo.visibility = View.GONE
+                    if (pbSubtitles.visibility == View.VISIBLE) {
+                        movie?.let {
+                            SubtitlesPresenter.getInstance().getSubtitlesList(it,
+                                    object : SubtitlesListDownloadListener {
+                                        override fun onListDownloaded(subtitlesList: ArrayList<Subtitle>) {
+                                            subtitlesAdapter =
+                                                    SubtitlesListAdapter(applicationContext, subtitlesList)
+                                            lvSubtitles.adapter = subtitlesAdapter
+                                            pbSubtitles.visibility = View.GONE
+                                        }
+
+                                        override fun onFailedToDownloadList() {
+                                            pbSubtitles.visibility = View.VISIBLE
+                                        }
+                                    })
+                        }
                     }
                 }
             }
+        } else {
+            ivSubtitles.visibility = View.GONE
         }
 
         lvSubtitles.onItemClickListener = listItemClickListener
@@ -112,12 +118,14 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                         if (mediaController?.isShowing == true) {
                             hideSystemUI()
                             mediaController?.hide()
-                            ivSubtitles.visibility = View.GONE
+                            if(movie?.movieObjectType == MovieObjectType.DEFAULT)
+                                ivSubtitles.visibility = View.GONE
                             tvDownloadInfo.visibility = View.GONE
                         } else {
                             showSystemUI()
                             mediaController?.show(0)
-                            ivSubtitles.visibility = View.VISIBLE
+                            if(movie?.movieObjectType == MovieObjectType.DEFAULT)
+                                ivSubtitles.visibility = View.VISIBLE
                             tvDownloadInfo.visibility = View.VISIBLE
                         }
                         rlSubtitles.visibility = View.GONE

@@ -37,4 +37,6 @@
     <string name="subtitles">Subtitles</string>
     <string name="genre">Genre</string>
     <string name="sort_by">Sort By</string>
+    <string name="find_more">Find More</string>
+    <string name="search_movies">Search Movies</string>
 </resources>

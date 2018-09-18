@@ -44,6 +44,11 @@ class Movie: Serializable {
     var uploadSpeed: Long = 0
     var downloadComplete: Boolean = false
 
+    var seeds = 0
+    var peers = 0
+
+    var movieObjectType = MovieObjectType.DEFAULT
+
     fun clone(): Movie {
         val movie = Movie()
 
@@ -82,6 +87,11 @@ class Movie: Serializable {
         movie.downloadSpeed = downloadSpeed
         movie.uploadSpeed = uploadSpeed
         movie.downloadComplete = downloadComplete
+
+        movie.seeds = seeds
+        movie.peers = peers
+
+        movie.movieObjectType = movieObjectType
 
         return movie
     }

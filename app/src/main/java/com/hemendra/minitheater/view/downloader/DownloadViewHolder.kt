@@ -43,8 +43,6 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         ivCover.setImageBitmap(null)
         loadingImageURL = imagesPresenter.loadCoverImage(m, this)
         tvTitle.text = m.title
-        tvQuality.text = String.format(Locale.getDefault(), "Quality: %s (%s)",
-                m.torrents[0].quality, m.torrents[0].size)
 
         updateProgress(m)
 
@@ -77,6 +75,19 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         movie?.downloadSeeds = m.downloadSeeds
         movie?.isDownloading = m.isDownloading
         movie?.isPaused = m.isPaused
+
+        var sizeStr = ""
+        if(m.torrents[0].size.isNotEmpty())
+            sizeStr = "(${m.torrents[0].size})"
+
+        if(movie?.torrents?.get(0)?.size?.isEmpty() == true) {
+            movie?.torrents?.get(0)?.size = sizeStr
+            movie?.torrents?.get(0)?.size_bytes = m.torrents[0].size_bytes
+            saveProgress()
+        }
+
+        tvQuality.text = String.format(Locale.getDefault(), "Quality: %s %s",
+                m.torrents[0].quality, sizeStr)
 
         var status = ""
         if(m.isDownloading && m.isPaused) status = "(Paused)"

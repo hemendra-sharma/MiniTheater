@@ -134,7 +134,7 @@ class Utils {
          * @param file Target tile
          * @return TRUE if the file was written successfully. FALSE otherwise.
          */
-        private fun writeToFile(data: ByteArray, file: File): Boolean {
+        fun writeToFile(data: ByteArray, file: File): Boolean {
             var fout: FileOutputStream? = null
             try {
                 val proceed = file.parentFile.exists() || file.parentFile.mkdirs()

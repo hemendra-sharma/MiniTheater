@@ -8,11 +8,10 @@ import com.hemendra.minitheater.utils.ConnectionCallback
 import com.hemendra.minitheater.utils.ContentDownloader
 import com.hemendra.minitheater.utils.CustomAsyncTask
 import com.hemendra.minitheater.utils.RemoteConfig
-import java.io.InputStream
 import java.net.HttpURLConnection
 
-class MoviesLoader(private var listener: OnMoviesLoadedListener):
-        CustomAsyncTask<Any, Void, ArrayList<Movie>?>() {
+class ExtraMovieMagnetUrlLoader(private var listener: OnMoviesLoadedListener):
+        CustomAsyncTask<Any, Void, String?>() {
 
     private var connection: HttpURLConnection? = null
     private var reason: MoviesDataSourceFailureReason = MoviesDataSourceFailureReason.UNKNOWN
@@ -29,16 +28,14 @@ class MoviesLoader(private var listener: OnMoviesLoadedListener):
         super.cancel(true)
     }
 
-    override fun doInBackground(vararg params: Any): ArrayList<Movie>? {
+    override fun doInBackground(vararg params: Any): String? {
         if(Looper.myLooper() == null) Looper.prepare()
 
-        val query = params[0] as String
-        val pageNumber = params[1] as Int
-        val sortBy = params[2] as String
-        val genre = params[3] as String
+        var pageURL = params[0] as String
+        if(!pageURL.endsWith("/")) pageURL = "$pageURL/"
 
-        val url: String = RemoteConfig.getInstance().getMovieSearchURL(query, pageNumber, sortBy, genre)
-        val stream: InputStream? = ContentDownloader.getInputStream(url, object: ConnectionCallback{
+        val url: String = RemoteConfig.getInstance().getExtraMovieRedirectUrl(pageURL)
+        val html: String? = ContentDownloader.getString(url, object: ConnectionCallback{
 
             override fun onConnectionInitialized(conn: HttpURLConnection) {
                 connection = conn
@@ -66,22 +63,23 @@ class MoviesLoader(private var listener: OnMoviesLoadedListener):
             return null
         }
 
-        stream?.let {
-            val movies = MoviesParser.parseStream(it)
-            if (isCancelled) {
-                reason = MoviesDataSourceFailureReason.ABORTED
-                return null
-            }
-            return movies
+        if(isCancelled) {
+            reason = MoviesDataSourceFailureReason.ABORTED
+            return null
+        }
+
+        html?.let {
+            reason = MoviesDataSourceFailureReason.NO_SEARCH_RESULTS
+            return ExtraMoviesScrapper.getMagnetUrlFromHtml(it)
         } ?: return null
     }
 
-    override fun onPostExecute(result: ArrayList<Movie>?) {
+    override fun onPostExecute(result: String?) {
         if(result != null) {
             if(result.isEmpty())
                 listener.onFailedToLoadMovies(MoviesDataSourceFailureReason.NO_SEARCH_RESULTS)
             else
-                listener.onMoviesLoaded(result)
+                listener.onMagnetURL(result)
         } else {
             listener.onFailedToLoadMovies(reason)
         }

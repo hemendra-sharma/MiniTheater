@@ -29,6 +29,11 @@ class ImagesPresenter private constructor(context: Context) : IImagesPresenter {
     }
 
     override fun abortAll() {
+        imagesDataSource.abortAll()
+    }
+
+    override fun close() {
+        imagesDataSource.abortAll()
         imagesDataSource.close()
         instance = null
     }

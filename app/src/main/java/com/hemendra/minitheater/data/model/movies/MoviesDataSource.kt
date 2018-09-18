@@ -36,6 +36,10 @@ class MoviesDataSource(private var listener: IMoviesDataSourceListener):
         listener.onResult(results)
     }
 
+    override fun onMagnetURL(magnetURL: String) {
+
+    }
+
     override fun onFailedToLoadMovies(reason: MoviesDataSourceFailureReason) {
         moviesLoader = null
         listener.onFailure(reason)

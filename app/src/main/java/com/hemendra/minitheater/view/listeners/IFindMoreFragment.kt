@@ -4,9 +4,10 @@ import android.content.Context
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.model.movies.MoviesDataSourceFailureReason
 
-interface IExplorerFragment {
+interface IFindMoreFragment {
     fun getCtx(): Context?
     fun onSearchStarted(message: String)
-    fun onSearchResults(movies: ArrayList<Movie>)
+    fun onSearchResults(results: ArrayList<Movie>)
+    fun onMagnetURL(magnetURL: String)
     fun onSearchFailed(reason: MoviesDataSourceFailureReason)
 }

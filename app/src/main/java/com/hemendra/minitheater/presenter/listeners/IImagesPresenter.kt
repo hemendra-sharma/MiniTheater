@@ -7,5 +7,6 @@ interface IImagesPresenter {
 
     fun loadCoverImage(movie: Movie, callback: ImageLoaderCallback) : String
     fun abortAll()
+    fun close()
 
 }

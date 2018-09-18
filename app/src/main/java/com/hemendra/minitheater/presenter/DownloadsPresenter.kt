@@ -3,7 +3,6 @@ package com.hemendra.minitheater.presenter
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
-import android.util.Log
 import com.hemendra.minitheater.data.DownloadsList
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.Torrent
@@ -128,13 +127,22 @@ class DownloadsPresenter private constructor():
 
     override fun getTorrentFile(torrent: Torrent): File? {
         val dir = File(dir.absolutePath+"/"+torrent.hash)
-        val subDirs = dir.listFiles()
-        if(subDirs != null
-                && subDirs.isNotEmpty() && subDirs[0].isDirectory) {
-            val files = subDirs[0].listFiles()
-            if(files != null
-                    && files.isNotEmpty() && files[0].isFile && files[0].length() > 0)
-                return files[0]
+        return getTorrentFile(dir)
+    }
+
+    private fun getTorrentFile(file: File): File? {
+        if(file.isFile && file.length() > 0) {
+            return file
+        }
+        //
+        if(file.exists() && file.isDirectory) {
+            val files = file.listFiles()
+            files?.let { subFiles ->
+                for(subFile in subFiles) {
+                    val f = getTorrentFile(subFile)
+                    if(f != null) return f
+                }
+            }
         }
         return null
     }

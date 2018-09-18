@@ -6,6 +6,7 @@ import com.hemendra.minitheater.data.model.movies.MoviesDataSourceFailureReason
 interface OnMoviesLoadedListener {
 
     fun onMoviesLoaded(results: ArrayList<Movie>)
+    fun onMagnetURL(magnetURL: String)
     fun onFailedToLoadMovies(reason: MoviesDataSourceFailureReason)
 
 }

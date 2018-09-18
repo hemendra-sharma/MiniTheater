@@ -21,6 +21,7 @@ import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import kotlinx.android.synthetic.main.fragment_explorer.*
 import android.widget.ArrayAdapter
 import com.hemendra.minitheater.utils.RemoteConfig
+import java.util.*
 
 
 class ExplorerFragment: Fragment(), IExplorerFragment {
@@ -34,6 +35,11 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     private var genreList: ArrayList<String>? = null
     private var sortingOptions: HashMap<String,String>? = null
     private var sortingOptionsKeys: ArrayList<String>? = null
+
+    private var savedView: View? = null
+    private var loadingFirstTime = true
+
+    private var spinnerCallCheck = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setHasOptionsMenu(true)
@@ -80,27 +86,21 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             }
 
         })
-
-        /*searchView.setOnQueryTextFocusChangeListener {
-            _, hasFocus -> settingsItem.isVisible = hasFocus }
-
-        settingsItem.setOnMenuItemClickListener {
-            Toast.makeText(activity, "1", Toast.LENGTH_SHORT).show()
-            true
-        }*/
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View {
-        return inflater.inflate(R.layout.fragment_explorer, container, false)
+                              savedInstanceState: Bundle?): View? {
+        savedView?.let { return it }
+        savedView = inflater.inflate(R.layout.fragment_explorer, container, false)
+        return savedView
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        (activity as AppCompatActivity).setSupportActionBar(toolbar)
-        lastSearched = ""
-        lastPageNumber = 1
+        toolbar?.let { (activity as AppCompatActivity).setSupportActionBar(it) }
 
         context?.let {
+            spinnerCallCheck = 0
+
             genreList = RemoteConfig.getInstance().getGenreOptions()
             sortingOptions = RemoteConfig.getInstance().getSortingOptionsMap()
             sortingOptionsKeys = RemoteConfig.getInstance().getSortingOptionsList()
@@ -109,35 +109,52 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
                     android.R.layout.simple_spinner_item, genreList!!)
             genreSpinnerAdapter.setDropDownViewResource(android.R.layout
                     .simple_spinner_dropdown_item)
-            spinnerGenre.adapter = genreSpinnerAdapter
+            spinnerGenre?.adapter = genreSpinnerAdapter
+            spinnerGenre?.onItemSelectedListener = onSpinnerItemSelected
 
             val sortingSpinnerAdapter = ArrayAdapter<String>(it,
                     android.R.layout.simple_spinner_item, sortingOptionsKeys!!)
             sortingSpinnerAdapter.setDropDownViewResource(android.R.layout
                     .simple_spinner_dropdown_item)
-            spinnerSortBy.adapter = sortingSpinnerAdapter
+            spinnerSortBy?.adapter = sortingSpinnerAdapter
+            spinnerSortBy?.onItemSelectedListener = onSpinnerItemSelected
         } ?: return
 
-        recycler.addOnScrollListener(object :
-                ContinuousScrollListener(recycler.layoutManager as LinearLayoutManager) {
-            override fun onLoadMore() {
-                if(!searchPresenter.isSearching()) {
-                    lastPageNumber++
-                    performSearch(lastSearched, lastPageNumber)
+        recycler?.let {
+            it.addOnScrollListener(object :
+                    ContinuousScrollListener(it.layoutManager as LinearLayoutManager) {
+                override fun onLoadMore() {
+                    if (!searchPresenter.isSearching()) {
+                        lastPageNumber++
+                        performSearch(lastSearched, lastPageNumber)
+                    }
                 }
-            }
-        })
+            })
+        }
 
-        tvProgress.setOnClickListener { performSearch(lastSearched, lastPageNumber) }
+        tvProgress?.setOnClickListener { performSearch(lastSearched, lastPageNumber) }
 
-        performSearch(lastSearched, lastPageNumber)
+        if(loadingFirstTime) {
+            loadingFirstTime = false
+            performSearch(lastSearched, lastPageNumber)
+        }
+    }
+
+    override fun onDestroyView() {
+        context?.let { ImagesPresenter.getInstance(it).abortAll() }
+        (savedView?.parent as ViewGroup?)?.removeAllViews()
+        spinnerGenre?.onItemSelectedListener = null
+        spinnerSortBy?.onItemSelectedListener = null
+        super.onDestroyView()
     }
 
     private val onSpinnerItemSelected = object: AdapterView.OnItemSelectedListener{
         override fun onItemSelected(parent: AdapterView<*>?,
                                     view: View?, position: Int, id: Long) {
-            lastPageNumber = 1
-            performSearch(lastSearched, lastPageNumber)
+            if(++spinnerCallCheck > 2) {
+                lastPageNumber = 1
+                performSearch(lastSearched, lastPageNumber)
+            }
         }
         override fun onNothingSelected(parent: AdapterView<*>?) {}
     }
@@ -147,25 +164,23 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         var genre = ""
         sortingOptions?.let { map ->
             if(map.size > 0) {
-                if(spinnerSortBy.selectedItemPosition != AdapterView.INVALID_POSITION) {
-                    sortingOptionsKeys ?.let { keys ->
-                        sortBy = sortingOptions?.get(keys[spinnerSortBy.selectedItemPosition]) ?: ""
+                spinnerSortBy?.let {
+                    if (it.selectedItemPosition != AdapterView.INVALID_POSITION) {
+                        sortingOptionsKeys?.let { keys ->
+                            sortBy = sortingOptions?.get(keys[it.selectedItemPosition]) ?: ""
+                        }
                     }
                 }
             }
         }
         genreList?.let { list ->
-            if(spinnerGenre.selectedItemPosition != AdapterView.INVALID_POSITION) {
-                genre = list[spinnerGenre.selectedItemPosition]
+            spinnerGenre?.let {
+                if (spinnerGenre.selectedItemPosition != AdapterView.INVALID_POSITION) {
+                    genre = list[it.selectedItemPosition]
+                }
             }
         }
         searchPresenter.performSearch(query, pageNumber, sortBy, genre)
-    }
-
-    override fun onDestroyView() {
-        searchPresenter.destroy()
-        context?.let { ImagesPresenter.getInstance(it).abortAll() }
-        super.onDestroyView()
     }
 
     override fun getCtx(): Context? = context
@@ -177,12 +192,10 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     override fun onSearchResults(movies: ArrayList<Movie>) {
         hideProgress()
-        spinnerGenre.onItemSelectedListener = onSpinnerItemSelected
-        spinnerSortBy.onItemSelectedListener = onSpinnerItemSelected
 
         if(lastPageNumber == 1) {
             adapter = MoviesListAdapter(movies, onMovieItemClickListener)
-            recycler.adapter = adapter
+            recycler?.adapter = adapter
             Handler().postDelayed({ checkLoadMore() }, 1000)
         } else {
             adapter?.appendData(movies)
@@ -207,10 +220,10 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     }
 
     private fun checkLoadMore() {
-        val mLayoutManager = recycler.layoutManager as LinearLayoutManager
-        val visibleItemCount = mLayoutManager.childCount
-        val totalItemCount = mLayoutManager.itemCount
-        val pastVisibleItemsCount = mLayoutManager.findFirstVisibleItemPosition()
+        val mLayoutManager = recycler?.layoutManager as LinearLayoutManager?
+        val visibleItemCount = mLayoutManager?.childCount ?: 0
+        val totalItemCount = mLayoutManager?.itemCount ?: 0
+        val pastVisibleItemsCount = mLayoutManager?.findFirstVisibleItemPosition() ?: -1
 
         if ((visibleItemCount + pastVisibleItemsCount) >= totalItemCount) {
             lastPageNumber = 2
@@ -227,24 +240,24 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     }
 
     private fun isProgressOrErrorVisible(): Boolean {
-        return rlProgress ?. let { rlProgress.visibility == View.VISIBLE } ?: true
+        return rlProgress ?. let { it.visibility == View.VISIBLE } ?: true
     }
 
     private fun showProgress(msg: String) {
-        pbProgress.visibility = View.VISIBLE
-        tvProgress.visibility = View.VISIBLE
-        rlProgress.visibility = View.VISIBLE
-        tvProgress.text = msg
+        pbProgress?.visibility = View.VISIBLE
+        tvProgress?.visibility = View.VISIBLE
+        rlProgress?.visibility = View.VISIBLE
+        tvProgress?.text = msg
     }
 
     private fun hideProgress() {
-        rlProgress?.let { rlProgress.visibility = View.GONE }
+        rlProgress?.let { it.visibility = View.GONE }
     }
 
     private fun showError(error: String) {
-        rlProgress.visibility = View.VISIBLE
-        tvProgress.visibility = View.VISIBLE
-        pbProgress.visibility = View.GONE
-        tvProgress.text = "$error\n\nTap Here to Retry!"
+        rlProgress?.visibility = View.VISIBLE
+        tvProgress?.visibility = View.VISIBLE
+        pbProgress?.visibility = View.INVISIBLE
+        tvProgress?.text = String.format(Locale.getDefault(), "%s\n\nTap Here to Retry!", error)
     }
 }

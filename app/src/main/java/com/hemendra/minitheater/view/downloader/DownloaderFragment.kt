@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v4.content.FileProvider
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +11,7 @@ import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.presenter.DownloadFailureReason
 import com.hemendra.minitheater.presenter.DownloadsPresenter
+import com.hemendra.minitheater.presenter.ImagesPresenter
 import com.hemendra.minitheater.view.listeners.OnDownloadItemClickListener
 import com.hemendra.minitheater.view.listeners.OnMovieDownloadClickListener
 import com.hemendra.minitheater.view.showMessage
@@ -22,6 +22,8 @@ class DownloaderFragment: Fragment() {
 
     private val downloadsPresenter = DownloadsPresenter.getInstance()
     private var adapter: DownloadsListAdapter? = null
+
+    private var savedView: View? = null
 
     private var movieToAdd: Movie? = null
     fun setMovieToAdd(movie: Movie) {
@@ -35,12 +37,12 @@ class DownloaderFragment: Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        Log.i("fragment", "onCreateView")
-        return inflater.inflate(R.layout.fragment_downloader, container, false)
+        savedView?.let { return it }
+        savedView = inflater.inflate(R.layout.fragment_downloader, container, false)
+        return savedView
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        Log.i("fragment", "onViewCreated")
         context?.let {
             DownloadsPresenter.getInstance().checkAndStartOngoingDownload(it)
         }
@@ -49,6 +51,12 @@ class DownloaderFragment: Fragment() {
             addDownload(it)
             movieToAdd = null
         }
+    }
+
+    override fun onDestroyView() {
+        context?.let { ImagesPresenter.getInstance(it).abortAll() }
+        (savedView?.parent as ViewGroup?)?.removeAllViews()
+        super.onDestroyView()
     }
 
     private fun loadFreshList() {
@@ -65,16 +73,15 @@ class DownloaderFragment: Fragment() {
             recycler?.let { r ->
                 r.adapter?.let { a ->
                     if(a.itemCount > 0)
-                        tvNoDownloads.visibility = View.GONE
+                        tvNoDownloads?.visibility = View.GONE
                     else
-                        tvNoDownloads.visibility = View.VISIBLE
+                        tvNoDownloads?.visibility = View.VISIBLE
                 }
             }
         }
     }
 
     private fun addDownload(movie: Movie) {
-        Log.i("fragment", "addDownload")
         val reason = downloadsPresenter.addDownload(movie)
         when (reason) {
             DownloadFailureReason.NONE -> {
@@ -97,7 +104,9 @@ class DownloaderFragment: Fragment() {
             // play movie in video player
 
             val file = downloadsPresenter.getTorrentFile(movie.torrents[0])
-            if(file != null) {
+            if(file != null && !file.absolutePath.endsWith(".mp4")) {
+                onExternalClicked(movie)
+            } else if(file != null) {
                 val tenMB = 10L * 1024L * 1024L
                 if(file.length() > tenMB) {
                     context?.let {
@@ -169,7 +178,7 @@ class DownloaderFragment: Fragment() {
                     context?.let {
                         val intent = Intent(Intent.ACTION_VIEW)
                         val uri = FileProvider.getUriForFile(it, it.packageName + ".provider", file)
-                        intent.setDataAndType(uri, "video/mp4")
+                        intent.setDataAndType(uri, "video/*")
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         startActivity(intent)
                     }

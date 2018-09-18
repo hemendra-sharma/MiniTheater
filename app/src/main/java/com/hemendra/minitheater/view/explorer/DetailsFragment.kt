@@ -27,6 +27,7 @@ import com.hemendra.minitheater.view.showMessage
 class DetailsFragment: Fragment() {
 
     private var movie: Movie? = null
+    private var savedView: View? = null
 
     fun setMovie(movie: Movie) {
         this.movie = movie
@@ -40,35 +41,43 @@ class DetailsFragment: Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_details, container, false)
+        savedView?.let { return it }
+        savedView = inflater.inflate(R.layout.fragment_details, container, false)
+        return savedView
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         movie ?: return
         context ?: return
 
-        tvTitle.text = movie?.title
+        tvTitle?.text = movie?.title
         ImagesPresenter.getInstance(context!!)
                 .loadCoverImage(movie!!, object : ImageLoaderCallback {
             override fun onImageLoaded(url: String, image: Bitmap) {
-                ivCover.setImageBitmap(image)
+                ivCover?.setImageBitmap(image)
             }
         })
-        tvRating.text = String.format(Locale.getDefault(), "%.1f/10", movie?.rating)
-        tvYear.text = movie?.year.toString()
-        tvLanguage.text = movie?.language
-        tvMpaaRating.text = movie?.mpa_rating
-        tvDescription.text = movie?.description_full
+        tvRating?.text = String.format(Locale.getDefault(), "%.1f/10", movie?.rating)
+        tvYear?.text = movie?.year.toString()
+        tvLanguage?.text = movie?.language
+        tvMpaaRating?.text = movie?.mpa_rating
+        tvDescription?.text = movie?.description_full
 
-        if(movie?.genres?.size ?: 0 == 0) tvGenres.visibility = View.GONE
+        if(movie?.genres?.size ?: 0 == 0) tvGenres?.visibility = View.GONE
         else fillGenres()
 
         if(movie?.yt_trailer_code?.isNotEmpty() == true)
-            tvTrailer.setOnClickListener(watchTrailerClicked)
+            tvTrailer?.setOnClickListener(watchTrailerClicked)
         else
-            tvTrailer.visibility = View.GONE
+            tvTrailer?.visibility = View.GONE
 
         fillTorrentsLayout()
+    }
+
+    override fun onDestroyView() {
+        context?.let { ImagesPresenter.getInstance(it).abortAll() }
+        (savedView?.parent as ViewGroup?)?.removeAllViews()
+        super.onDestroyView()
     }
 
     private fun fillGenres() {
@@ -79,12 +88,12 @@ class DetailsFragment: Fragment() {
                 if(i < it.genres.size-1)
                     sb.append(", ")
             }
-            tvGenres.text = sb.toString()
+            tvGenres?.text = sb.toString()
         }
     }
 
     private fun fillTorrentsLayout() {
-        llTorrents.removeAllViews()
+        llTorrents?.removeAllViews()
         movie?.let {
             val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -109,7 +118,7 @@ class DetailsFragment: Fragment() {
                 tvDownload.setOnClickListener(onDownloadClicked)
                 tvPlay.setOnClickListener(onPlayClicked)
 
-                llTorrents.addView(view, params)
+                llTorrents?.addView(view, params)
             }
         }
     }
