@@ -1,12 +1,9 @@
 package com.hemendra.minitheater.data.model.movies
 
-import android.os.Environment
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.MovieObjectType
-import com.hemendra.minitheater.utils.Utils
 import org.json.JSONArray
 import org.json.JSONException
-import java.io.File
 
 class ExtraMoviesScrapper {
     companion object {
@@ -62,12 +59,13 @@ class ExtraMoviesScrapper {
                 val length = jsonArray.length()
                 for(i in 0 until length) {
                     val arr = jsonArray.getJSONArray(i)
-                    if(arr.length() >= 5) {
+                    if(arr.length() >= 9) {
                         val movie = Movie()
-                        movie.url = arr.getString(1)
-                        movie.title = arr.getString(2)
+                        movie.url = arr.optString(1)
+                        movie.title = arr.optString(2)
                         movie.seeds = arr.optInt(3)
                         movie.peers = arr.optInt(4)
+                        movie.uploader = arr.optString(8)
                         movie.movieObjectType = MovieObjectType.EXTRA
                         moviesList.add(movie)
                     }

@@ -67,41 +67,69 @@
 
         <TextView
             android:id="@+id/tvQuality"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_toEndOf="@+id/ivCover"
             android:layout_below="@+id/tvTitle"
             android:layout_marginStart="10dp"
-            android:textSize="@dimen/textSize16"
-            android:textColor="@color/textColorLightBackground"
-            android:maxLines="3"
-            android:ellipsize="end"
-            android:gravity="center_vertical|start"
+            android:textSize="@dimen/textSize14"
+            android:textColor="#fd7f01"
+            android:maxLines="1"
+            android:gravity="center"
             android:text="@string/quality_720p"/>
 
         <TextView
-            android:id="@+id/tvSpeed"
-            android:layout_width="match_parent"
+            android:id="@+id/tvSize"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@+id/tvQuality"
+            android:layout_alignTop="@+id/tvQuality"
+            android:layout_alignBottom="@+id/tvQuality"
+            android:layout_marginStart="10dp"
+            android:textSize="@dimen/textSize14"
+            android:textColor="#0127fd"
+            android:maxLines="1"
+            android:gravity="center"
+            android:text="@string/size_700_mb"/>
+
+        <TextView
+            android:id="@+id/tvDownloadSpeed"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_toEndOf="@+id/ivCover"
             android:layout_below="@+id/tvQuality"
             android:layout_marginStart="10dp"
             android:textSize="@dimen/textSize14"
-            android:textColor="@color/textColorLightBackground"
+            android:textColor="#088f00"
             android:maxLines="3"
             android:ellipsize="end"
             android:gravity="center_vertical|start"
-            android:text="@string/_0_kb_s"/>
+            android:text="@string/download_0_kb_s"/>
+
+        <TextView
+            android:id="@+id/tvUploadSpeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@+id/tvDownloadSpeed"
+            android:layout_alignTop="@+id/tvDownloadSpeed"
+            android:layout_alignBottom="@+id/tvDownloadSpeed"
+            android:layout_marginStart="10dp"
+            android:textSize="@dimen/textSize14"
+            android:textColor="#8f0002"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:gravity="center_vertical|start"
+            android:text="@string/upload_0_kb_s"/>
 
         <TextView
             android:id="@+id/tvProgress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_toEndOf="@+id/ivCover"
-            android:layout_below="@+id/tvSpeed"
+            android:layout_below="@+id/tvDownloadSpeed"
             android:layout_marginStart="10dp"
             android:textSize="@dimen/textSize14"
-            android:textColor="#088f00"
+            android:textColor="@color/textColorLightBackground"
             android:maxLines="3"
             android:ellipsize="end"
             android:textStyle="bold"

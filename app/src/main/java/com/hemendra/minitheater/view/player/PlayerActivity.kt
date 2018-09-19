@@ -27,7 +27,6 @@ import com.hemendra.minitheater.presenter.SubtitlesPresenter
 import com.hemendra.minitheater.presenter.listeners.SubtitleDownloadListener
 import com.hemendra.minitheater.presenter.listeners.SubtitlesListDownloadListener
 import com.hemendra.minitheater.service.DownloaderService
-import com.hemendra.minitheater.utils.LocalFileStreamingServer
 import com.hemendra.minitheater.utils.Utils
 import com.hemendra.minitheater.view.showMessage
 import kotlinx.android.synthetic.main.activity_player.*
@@ -45,13 +44,12 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         private const val TAG = "PlayerActivity"
     }
 
-    private var localFileStreamingServer: LocalFileStreamingServer? = null
-
     private var mediaPlayer: MediaPlayer? = null
     private var mediaController: MediaController? = null
 
     private var isVideoReadyToBePlayed = false
     private var movie: Movie? = null
+    private var movieFile: File? = null
 
     private val handler = Handler()
 
@@ -79,7 +77,10 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
         surfaceView.holder.addCallback(this)
         llHolder.setOnTouchListener(this)
-        if(movie?.movieObjectType == MovieObjectType.DEFAULT) {
+        if(movie?.movieObjectType == MovieObjectType.EXTRA) {
+            ivSubtitles.visibility = View.GONE
+        } else {
+            ivSubtitles.visibility = View.VISIBLE
             ivSubtitles.setOnClickListener { _ ->
                 if (rlSubtitles.visibility == View.VISIBLE) {
                     rlSubtitles.visibility = View.GONE
@@ -106,8 +107,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                     }
                 }
             }
-        } else {
-            ivSubtitles.visibility = View.GONE
         }
 
         lvSubtitles.onItemClickListener = listItemClickListener
@@ -118,13 +117,12 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                         if (mediaController?.isShowing == true) {
                             hideSystemUI()
                             mediaController?.hide()
-                            if(movie?.movieObjectType == MovieObjectType.DEFAULT)
-                                ivSubtitles.visibility = View.GONE
+                            ivSubtitles.visibility = View.GONE
                             tvDownloadInfo.visibility = View.GONE
                         } else {
                             showSystemUI()
                             mediaController?.show(0)
-                            if(movie?.movieObjectType == MovieObjectType.DEFAULT)
+                            if(movie?.movieObjectType != MovieObjectType.EXTRA)
                                 ivSubtitles.visibility = View.VISIBLE
                             tvDownloadInfo.visibility = View.VISIBLE
                         }
@@ -295,26 +293,29 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         }
 
         movie?.let {
-            val file = DownloadsPresenter.getInstance().getTorrentFile(it.torrents[0])
-            val twoMB = 10L * 1024L * 1024L
-            if(file == null || file.length() < twoMB) {
-                rlProgress.visibility = View.VISIBLE
-                handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
-                return
-            } else {
-                rlProgress.visibility = View.GONE
-            }
+            movieFile = DownloadsPresenter.getInstance().getTorrentFile(it.torrents[0])
+            movieFile?.let { file ->
+                val twoMB = 10L * 1024L * 1024L
+                if(file.length() < twoMB) {
+                    rlProgress.visibility = View.VISIBLE
+                    handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
+                    return
+                } else {
+                    rlProgress.visibility = View.GONE
+                }
 
-            localFileStreamingServer = LocalFileStreamingServer(file,
-                    it.torrents[0].size_bytes)
-            localFileStreamingServer?.init()
-            localFileStreamingServer?.start()
+                mediaPlayer = MediaPlayer()
+                try {
+                    mediaPlayer?.setDataSource(file.absolutePath)
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    mediaPlayer = null
+                    destroyMediaPlayerAndStopServer()
+                    handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
+                    return
+                }
+            } ?: return
         } ?: return
-
-        mediaPlayer = MediaPlayer()
-        // mediaPlayer?.setDataSource(this,
-        //              Uri.parse("http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4"))
-        mediaPlayer?.setDataSource(localFileStreamingServer?.fileUrl)
         mediaPlayer?.setDisplay(surfaceView.holder)
         mediaPlayer?.setOnBufferingUpdateListener(this)
         mediaPlayer?.setOnCompletionListener(this)
@@ -325,7 +326,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         mediaPlayer?.setOnInfoListener(this)
 
         try {
-            mediaPlayer?.prepare()
+            mediaPlayer?.prepareAsync()
         }catch (e: IOException) {
             e.printStackTrace()
             mediaPlayer = null
@@ -351,8 +352,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         mediaPlayer?.reset()
         mediaPlayer?.release()
         mediaPlayer = null
-        localFileStreamingServer?.stop()
-        localFileStreamingServer = null
     }
 
     override fun onInfo(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
@@ -475,7 +474,9 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
     }
 
     override fun getBufferPercentage(): Int {
-        return localFileStreamingServer?.bufferPercentage?.toInt() ?: 0
+        val downloadedSize = (movieFile?.length() ?: 0).toDouble()
+        val expectedSize = (movie?.torrents?.get(0)?.size_bytes ?: 0).toDouble()
+        return ((downloadedSize / expectedSize) * 100f).toInt()
     }
 
     private fun maxSeekPosition(): Int {

@@ -46,6 +46,18 @@
             android:maxLines="1"
             android:text="@string/_55_peers"/>
 
+        <TextView
+            android:id="@+id/tvUploadedBy"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/tvTitle"
+            android:layout_alignParentEnd="true"
+            android:layout_marginStart="10dp"
+            android:textSize="@dimen/textSize14"
+            android:textColor="#bc6400"
+            android:maxLines="1"
+            android:text="@string/uploader"/>
+
         <ProgressBar
             android:id="@+id/pb"
             android:layout_width="40dp"

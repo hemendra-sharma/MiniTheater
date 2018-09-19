@@ -46,6 +46,7 @@ class Movie: Serializable {
 
     var seeds = 0
     var peers = 0
+    var uploader = ""
 
     var movieObjectType = MovieObjectType.DEFAULT
 
@@ -90,6 +91,7 @@ class Movie: Serializable {
 
         movie.seeds = seeds
         movie.peers = peers
+        movie.uploader = uploader
 
         movie.movieObjectType = movieObjectType
 

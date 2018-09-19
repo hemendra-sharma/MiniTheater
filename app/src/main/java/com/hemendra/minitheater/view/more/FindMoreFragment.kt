@@ -130,14 +130,18 @@ class FindMoreFragment: Fragment(), IFindMoreFragment {
         clickedMovie?.let { movie ->
             movie.id = magnetURL.hashCode()
             val torrent = Torrent()
+            if(movie.title.toLowerCase().contains("720p"))
+                torrent.quality = "720p"
+            else if(movie.title.toLowerCase().contains("1080p"))
+                torrent.quality = "1080p"
             torrent.hash = getHashFromMagnetURL(magnetURL)
             torrent.url = magnetURL
             movie.torrents.add(torrent)
             context?.let { ctx ->
-                showYesNoMessage(ctx, "This movie can be downloaded. " +
-                        "Do you want to add it to your downloads list?", Runnable {
-                    onMovieDownloadClickListener?.onDownloadClicked(movie)
-                })
+                showYesNoMessage(ctx, "${movie.title}\n\nDo you want to download this movie?",
+                        Runnable {
+                            onMovieDownloadClickListener?.onDownloadClicked(movie)
+                        })
             }
         }
     }

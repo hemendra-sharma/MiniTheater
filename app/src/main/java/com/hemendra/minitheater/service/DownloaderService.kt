@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -30,6 +31,9 @@ import com.masterwok.simpletorrentandroid.contracts.TorrentSessionListener
 import com.masterwok.simpletorrentandroid.models.TorrentSessionStatus
 import java.io.File
 import java.util.*
+import android.media.RingtoneManager
+
+
 
 class DownloaderService: Service(), TorrentSessionListener {
 
@@ -38,9 +42,11 @@ class DownloaderService: Service(), TorrentSessionListener {
     private var builder: NotificationCompat.Builder? = null
 
     companion object {
-        private const val NOTIFICATION_ID = 1001
+        private const val NOTIFICATION_ID = 2001
+        private const val FINISHED_NOTIFICATION_ID = 2002
         private const val PAUSE_ACTION = 1002
         private const val STOP_ACTION = 1003
+        private const val OK_ACTION = 1004
         private const val NOTIFICATION_CHANNEL_ID = "MovieDownloads"
 
         const val ACTION_STOP_DOWNLOAD = "com.hemendra.minitheater.ACTION_STOP_DOWNLOAD"
@@ -95,7 +101,8 @@ class DownloaderService: Service(), TorrentSessionListener {
                     stopSelf()
                 }
                 return START_STICKY
-            } else if(act == "Stop") {
+            } else if(act == "Stop" || act == "OK") {
+                notificationManager?.cancel(FINISHED_NOTIFICATION_ID)
                 stopSelf()
             }
             return START_NOT_STICKY
@@ -299,6 +306,14 @@ class DownloaderService: Service(), TorrentSessionListener {
         return NotificationCompat.Action(R.drawable.ic_stop_black_30dp, "Stop", pi)
     }
 
+    private fun getOkAction(): NotificationCompat.Action {
+        val intent = Intent(applicationContext, DownloaderService::class.java)
+        intent.putExtra("action", "OK")
+        val pi = PendingIntent.getService(applicationContext, OK_ACTION,
+                intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        return NotificationCompat.Action(R.drawable.ic_check_black_30dp, "OK", pi)
+    }
+
     private fun onDownloadFinished() {
         val intent = Intent(ACTION_DOWNLOAD_COMPLETE)
         intent.putExtra(EXTRA_MOVIE, movie)
@@ -314,6 +329,7 @@ class DownloaderService: Service(), TorrentSessionListener {
             DownloadsPresenter.getInstance().updateDownloadProgress(it)
         }
 
+        stopForeground(true)
         stopSelf()
     }
 
@@ -425,7 +441,13 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     private fun showFinishedNotification() {
         notificationView?.setTextViewText(R.id.tvInfo, "Downloaded Complete")
-        notificationManager?.notify(NOTIFICATION_ID, builder?.build())
+        builder?.mActions?.clear()
+        builder?.addAction(getOkAction())
+        builder?.setOngoing(false)
+        builder?.setAutoCancel(true)
+        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        builder?.setSound(uri, AudioManager.STREAM_NOTIFICATION)
+        notificationManager?.notify(FINISHED_NOTIFICATION_ID, builder?.build())
     }
 
     override fun onAddTorrent(torrentHandle: TorrentHandle,
@@ -447,15 +469,12 @@ class DownloaderService: Service(), TorrentSessionListener {
                                     torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onMetadataReceived- 1")
         movie?.let { m ->
-            Log.d("service", "onMetadataReceived - 2")
             if(m.movieObjectType == MovieObjectType.EXTRA) {
-                Log.d("service", "onMetadataReceived - 3")
                 val totalSize = torrentHandle.torrentFile().totalSize()
                 val totalSizeMB = totalSize.toDouble() / 1024f / 1024f
-                m.torrents[0].size = String.format(Locale.getDefault(), "%.2f", totalSizeMB)
+                m.torrents[0].size = String.format(Locale.getDefault(), "%.2f MB", totalSizeMB)
                 m.torrents[0].size_bytes = totalSize
                 publishProgress(torrentSessionStatus)
-                Log.d("service", "totalSize: $totalSize | totalSizeMB: $totalSizeMB")
             }
         }
     }

@@ -27,9 +27,11 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
     private val ivCover: ImageView = view.findViewById(R.id.ivCover)
     private val tvTitle: TextView = view.findViewById(R.id.tvTitle)
     private val tvQuality: TextView = view.findViewById(R.id.tvQuality)
+    private val tvSize: TextView = view.findViewById(R.id.tvSize)
     private val tvProgress: TextView = view.findViewById(R.id.tvProgress)
     private val tvSeeds: TextView = view.findViewById(R.id.tvSeeds)
-    private val tvSpeed: TextView = view.findViewById(R.id.tvSpeed)
+    private val tvDownloadSpeed: TextView = view.findViewById(R.id.tvDownloadSpeed)
+    private val tvUploadSpeed: TextView = view.findViewById(R.id.tvUploadSpeed)
     private val ivExternalVideo: ImageView = view.findViewById(R.id.ivExternalVideo)
     private val ivPause: ImageView = view.findViewById(R.id.ivPause)
     private val ivStop: ImageView = view.findViewById(R.id.ivStop)
@@ -76,40 +78,44 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         movie?.isDownloading = m.isDownloading
         movie?.isPaused = m.isPaused
 
-        var sizeStr = ""
-        if(m.torrents[0].size.isNotEmpty())
-            sizeStr = "(${m.torrents[0].size})"
-
         if(movie?.torrents?.get(0)?.size?.isEmpty() == true) {
-            movie?.torrents?.get(0)?.size = sizeStr
+            movie?.torrents?.get(0)?.size = m.torrents[0].size
             movie?.torrents?.get(0)?.size_bytes = m.torrents[0].size_bytes
             saveProgress()
         }
 
-        tvQuality.text = String.format(Locale.getDefault(), "Quality: %s %s",
-                m.torrents[0].quality, sizeStr)
+        if(m.torrents[0].quality.isNotEmpty())
+            tvQuality.text = String.format(Locale.getDefault(), "Quality: %s",
+                    m.torrents[0].quality)
+        else
+            tvQuality.visibility = View.GONE
+
+        if(m.torrents[0].size.isNotEmpty())
+            tvSize.text = String.format(Locale.getDefault(), "Size: %s", m.torrents[0].size)
+        else
+            tvSize.visibility = View.GONE
+
+        tvDownloadSpeed.text = String.format(Locale.getDefault(),
+                "Down: %.1f KB/s", m.downloadSpeed.toFloat() / 1024f)
+        tvUploadSpeed.text = String.format(Locale.getDefault(),
+                "Up: %.1f KB/s", m.uploadSpeed.toFloat() / 1024f)
 
         var status = ""
-        if(m.isDownloading && m.isPaused) status = "(Paused)"
+        if(m.isDownloading && m.isPaused) status = " (Paused)"
         else if(!m.isDownloading) {
             if(m.downloadProgress >= 1f)
-                status = "(Finished)"
+                status = " (Finished)"
             else
-                status = "(Stopped)"
+                status = " (Stopped)"
         }
-
-        tvSpeed.text = String.format(Locale.getDefault(),
-                "D: %.1f KB/s, U: %.1f KB/s %s",
-                (m.downloadSpeed.toFloat() / 1024f),
-                (m.uploadSpeed.toFloat() / 1024f), status)
-
-        tvSeeds.text = String.format(Locale.getDefault(), "%d Seeds", m.downloadSeeds)
 
         var downloadedMB = m.torrents[0].size_bytes.toDouble() * m.downloadProgress.toDouble()
         downloadedMB = downloadedMB / 1024f / 1024f
 
         tvProgress.text = String.format(Locale.getDefault(),
-                "%.2f%% (%.1f MB)", m.downloadProgress * 100f, downloadedMB)
+                "%.2f%% (%.1f MB)%s", m.downloadProgress * 100f, downloadedMB, status)
+
+        tvSeeds.text = String.format(Locale.getDefault(), "%d Seeds", m.downloadSeeds)
 
         if(m.isDownloading) {
             if(m.isPaused) {

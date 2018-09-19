@@ -59,15 +59,19 @@ class RemoteConfig private constructor() {
     private var extraMovieRedirectReplace: String = ""
     private var extraMovieRedirectReplaceWith: String = ""
 
+    private var documentReadCount = 0
+
     private var listener: OnCompleteListener<QuerySnapshot> = OnCompleteListener {
         if(it.isSuccessful) {
             for(document in it.result) {
                 when(document.id) {
                     "key" -> {
+                        documentReadCount++
                         headerParameterName = document["param"] as String
                         headerParameterValue = document["key"] as String
                     }
                     "all_movies" -> {
+                        documentReadCount++
                         allMoviesURL = document["all_movies_url"] as String
                         allMoviesPageParameterName = document["all_movies_param_page"] as String
                         allMoviesLimitParameterName = document["all_movies_param_limit"] as String
@@ -84,20 +88,24 @@ class RemoteConfig private constructor() {
                                 document["all_movies_param_genre_list"] as String
                     }
                     "get_image" -> {
+                        documentReadCount++
                         imageURL = document["get_image_url"] as String
                         imagePartToExclude = document["get_image_part_to_exclude"] as String
                         imageStringToReplace = document["get_image_string_to_replace"] as String
                     }
                     "get_torrent" -> {
+                        documentReadCount++
                         torrentURL = document["url"] as String
                         torrentStringToReplace = document["string_to_replace"] as String
                     }
                     "magnet" -> {
+                        documentReadCount++
                         magnetURL = document["magnet_url"] as String
                         magnetReplaceHash = document["hash_replace"] as String
                         magnetReplaceMovieName = document["movie_name_replace"] as String
                     }
                     "extra_movies" -> {
+                        documentReadCount++
                         extraMovieSearchURL = document["extra_movies_search_url"] as String
                         extraMovieQueryParam = document["extra_movies_query_param"] as String
                         extraMoviePageParam = document["extra_movies_page_param"] as String
@@ -108,8 +116,10 @@ class RemoteConfig private constructor() {
                     }
                 }
             }
-            isInitialized = true
-            onInitialized?.run()
+            if(documentReadCount >= 6) {
+                isInitialized = true
+                onInitialized?.run()
+            }
         } else {
             onInitializationFailed?.run()
         }

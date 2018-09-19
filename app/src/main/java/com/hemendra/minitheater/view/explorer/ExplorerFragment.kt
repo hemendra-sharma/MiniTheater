@@ -142,6 +142,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     override fun onDestroyView() {
         context?.let { ImagesPresenter.getInstance(it).abortAll() }
+        (activity as AppCompatActivity?)?.setSupportActionBar(null)
         (savedView?.parent as ViewGroup?)?.removeAllViews()
         spinnerGenre?.onItemSelectedListener = null
         spinnerSortBy?.onItemSelectedListener = null

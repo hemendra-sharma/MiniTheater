@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
+import android.view.KeyEvent
 import android.view.Menu
 import android.view.View
 import com.hemendra.minitheater.R
@@ -178,6 +179,15 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+
+    /*override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
+        if(event?.keyCode == KeyEvent.KEYCODE_BACK) {
+            if(event.action == KeyEvent.ACTION_UP)
+                onBackPressed()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }*/
 
     override fun onBackPressed() {
         when(currentFragmentTag()) {

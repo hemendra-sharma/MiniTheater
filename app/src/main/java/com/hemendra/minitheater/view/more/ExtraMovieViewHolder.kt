@@ -17,6 +17,7 @@ class ExtraMovieViewHolder(view: View, private val listener: OnMovieItemClickLis
     private val tvTitle: TextView = view.findViewById(R.id.tvTitle)
     private val tvSeeds: TextView = view.findViewById(R.id.tvSeeds)
     private val tvPeers: TextView = view.findViewById(R.id.tvPeers)
+    private val tvUploadedBy: TextView = view.findViewById(R.id.tvUploadedBy)
     private val pb: ProgressBar = view.findViewById(R.id.pb)
     var movie: Movie? = null
 
@@ -33,6 +34,7 @@ class ExtraMovieViewHolder(view: View, private val listener: OnMovieItemClickLis
         tvTitle.text = movie.title
         tvSeeds.text = String.format(Locale.getDefault(), "%d Seeds", movie.seeds)
         tvPeers.text = String.format(Locale.getDefault(), "%d Peers", movie.peers)
+        tvUploadedBy.text = String.format(Locale.getDefault(), "%s", movie.uploader)
     }
 
     fun showProgress() {
@@ -40,6 +42,7 @@ class ExtraMovieViewHolder(view: View, private val listener: OnMovieItemClickLis
         tvTitle.visibility = View.GONE
         tvSeeds.visibility = View.GONE
         tvPeers.visibility = View.GONE
+        tvUploadedBy.visibility = View.GONE
         card.cardElevation = 0f
     }
 
@@ -48,6 +51,7 @@ class ExtraMovieViewHolder(view: View, private val listener: OnMovieItemClickLis
         tvTitle.visibility = View.VISIBLE
         tvSeeds.visibility = View.VISIBLE
         tvPeers.visibility = View.VISIBLE
+        tvUploadedBy.visibility = View.VISIBLE
         card.cardElevation = 5f
     }
 

@@ -39,4 +39,8 @@
     <string name="sort_by">Sort By</string>
     <string name="find_more">Find More</string>
     <string name="search_movies">Search Movies</string>
+    <string name="size_700_mb">Size: 700 MB</string>
+    <string name="download_0_kb_s">Download: 0 KB/s</string>
+    <string name="upload_0_kb_s">Upload: 0 KB/s</string>
+    <string name="uploader">Uploader</string>
 </resources>
