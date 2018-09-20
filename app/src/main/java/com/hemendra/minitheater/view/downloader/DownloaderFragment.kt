@@ -102,24 +102,12 @@ class DownloaderFragment: Fragment() {
 
         override fun onItemClicked(movie: Movie) {
             // play movie in video player
-
             val file = downloadsPresenter.getTorrentFile(movie.torrents[0])
             if(file != null && !file.absolutePath.endsWith(".mp4")) {
                 onExternalClicked(movie)
-            } else if(file != null) {
-                val tenMB = 10L * 1024L * 1024L
-                if(file.length() > tenMB) {
-                    context?.let {
-                        onMovieDownloadClickListener?.onPlayClicked(movie)
-                    }
-                } else {
-                    context?.let {
-                        showMessage(it, "No data to play! Download at least 10 MB to start playing")
-                    }
-                }
             } else {
                 context?.let {
-                    showMessage(it, "No data to play! Download at least 10 MB to start playing")
+                    onMovieDownloadClickListener?.onPlayClicked(movie)
                 }
             }
         }
@@ -142,15 +130,9 @@ class DownloaderFragment: Fragment() {
 
         override fun onStopClicked(movie: Movie) {
             context?.let {
-                val msg = """You may not be able to resume the download if you stop it. If the
-                    |movie is not downloaded completely, then you should only Pause/Resume.
-                    |Do you want to stop the download anyway?
-                """.trimMargin()
-                showYesNoMessage(it, msg, onYesClicked = Runnable {
-                    if(!downloadsPresenter.stopDownload(it, movie)) {
-                        showMessage(it, "Failed to Stop Download!")
-                    }
-                })
+                if(!downloadsPresenter.stopDownload(it, movie)) {
+                    showMessage(it, "Failed to Stop Download!")
+                }
             }
         }
 

@@ -93,7 +93,7 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         if(m.torrents[0].size.isNotEmpty())
             tvSize.text = String.format(Locale.getDefault(), "Size: %s", m.torrents[0].size)
         else
-            tvSize.visibility = View.GONE
+            tvSize.text = "Size: ..."
 
         tvDownloadSpeed.text = String.format(Locale.getDefault(),
                 "Down: %.1f KB/s", m.downloadSpeed.toFloat() / 1024f)

@@ -294,9 +294,17 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
         movie?.let {
             movieFile = DownloadsPresenter.getInstance().getTorrentFile(it.torrents[0])
+            if(movieFile == null) {
+                Log.d(TAG, "file not created yet")
+                rlProgress.visibility = View.VISIBLE
+                handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
+                return
+            }
+
             movieFile?.let { file ->
-                val twoMB = 10L * 1024L * 1024L
-                if(file.length() < twoMB) {
+                val tenMB = 10L * 1024L * 1024L
+                if(file.length() < tenMB) {
+                    Log.d(TAG, "file length is small: ${file.length() / 1024f / 1024f} MB")
                     rlProgress.visibility = View.VISIBLE
                     handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
                     return
@@ -455,6 +463,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
             -38 -> {
                 sb.append("what : $what | extra: $extra")
                 tryResettingMediaPlayer(movie?.downloadProgress ?: 0f)
+                return true
             }
             else -> sb.append("what : $what | extra: $extra")
         }

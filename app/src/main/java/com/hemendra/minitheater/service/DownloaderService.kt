@@ -32,7 +32,7 @@ import com.masterwok.simpletorrentandroid.models.TorrentSessionStatus
 import java.io.File
 import java.util.*
 import android.media.RingtoneManager
-
+import com.frostwire.jlibtorrent.TorrentInfo
 
 
 class DownloaderService: Service(), TorrentSessionListener {
@@ -150,7 +150,17 @@ class DownloaderService: Service(), TorrentSessionListener {
             torrentSession?.listener = this
 
             Thread(Runnable {
-                torrentSession?.start(this, torrentUri)
+                val bencode = Utils.readByteArrayFromFile(File(savingDirectory, "bencode"))
+                if(bencode != null) {
+                    val info = TorrentInfo.bdecode(bencode)
+                    if(info != null) {
+                        torrentSession?.start(bencode)
+                    } else {
+                        torrentSession?.start(this, torrentUri)
+                    }
+                } else {
+                    torrentSession?.start(this, torrentUri)
+                }
             }).start()
 
             broadcastSpeed()
@@ -368,10 +378,6 @@ class DownloaderService: Service(), TorrentSessionListener {
         val progress = torrentSessionStatus.progress
         val upSpeed = torrentSessionStatus.uploadRate
 
-        Log.d("service", "publishProgress | speed: $speed, seeds: $seeds, progress: $progress")
-        Log.d("service", "publishProgress | downloaded: ${torrentSessionStatus.bytesDownloaded}," +
-                " wanted: ${torrentSessionStatus.bytesWanted}")
-
         movie?.let { m ->
             if(m.downloadProgress >= 1f) {
                 onDownloadFinished()
@@ -467,24 +473,24 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     override fun onMetadataReceived(torrentHandle: TorrentHandle,
                                     torrentSessionStatus: TorrentSessionStatus) {
-        Log.d("service", "onMetadataReceived- 1")
-        movie?.let { m ->
-            if(m.movieObjectType == MovieObjectType.EXTRA) {
-                val totalSize = torrentHandle.torrentFile().totalSize()
-                val totalSizeMB = totalSize.toDouble() / 1024f / 1024f
-                m.torrents[0].size = String.format(Locale.getDefault(), "%.2f MB", totalSizeMB)
-                m.torrents[0].size_bytes = totalSize
-                publishProgress(torrentSessionStatus)
-            }
+        if(movie?.movieObjectType == MovieObjectType.EXTRA) {
+            val totalSize = torrentHandle.torrentFile().totalSize()
+            val totalSizeMB = totalSize.toDouble() / 1024f / 1024f
+            movie?.torrents?.get(0)?.size = String.format(Locale.getDefault(), "%.2f MB", totalSizeMB)
+            movie?.torrents?.get(0)?.size_bytes = totalSize
+            publishProgress(torrentSessionStatus)
         }
     }
 
     override fun onPieceFinished(torrentHandle: TorrentHandle,
                                  torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onPieceFinished")
-        if(torrentHandle.needSaveResumeData()) {
-            torrentHandle.saveResumeData()
-            Log.d("service", "======================== saveResumeData")
+        val bencode = torrentHandle.torrentFile().bencode()
+        bencode?.let {
+            movie?.let { m ->
+                val savingDirectory = getDownloadDirectoryFor(m.torrents[0])
+                Utils.writeToFile(it, File(savingDirectory, "bencode"))
+            }
         }
         publishProgress(torrentSessionStatus)
     }
