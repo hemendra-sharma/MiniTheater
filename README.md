@@ -5,6 +5,7 @@ Download, stream and watch movies online on your Android device.
   - Streaming Video
   - Downloading Torrents
   - Firebase Firestore (realtime JSON database)
+  - Foreground Service
   - HTML Scrapping
   - MVP Architecture
   - JAVA Design Patterns
