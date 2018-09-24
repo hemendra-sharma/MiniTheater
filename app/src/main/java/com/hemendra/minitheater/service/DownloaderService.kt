@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -101,8 +102,8 @@ class DownloaderService: Service(), TorrentSessionListener {
                     stopSelf()
                 }
                 return START_STICKY
-            } else if(act == "Stop" || act == "OK") {
-                notificationManager?.cancel(FINISHED_NOTIFICATION_ID)
+            } else if(act == "Stop") {
+                notificationManager?.cancel(NOTIFICATION_ID)
                 stopSelf()
             }
             return START_NOT_STICKY
@@ -257,7 +258,9 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     private fun getNotification(): Notification? {
         builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-        builder?.setSmallIcon(R.mipmap.ic_launcher_foreground)
+        builder?.setSmallIcon(R.drawable.ic_file_download_black_40dp)
+        builder?.setLargeIcon(BitmapFactory.decodeResource(resources,
+                R.mipmap.ic_launcher_foreground))
         builder?.setTicker("Downloading ${movie?.title ?: ""}")
         builder?.setOngoing(true)
         builder?.setContentTitle(movie?.title ?: "Downloading Movie")
@@ -316,14 +319,6 @@ class DownloaderService: Service(), TorrentSessionListener {
         return NotificationCompat.Action(R.drawable.ic_stop_black_30dp, "Stop", pi)
     }
 
-    private fun getOkAction(): NotificationCompat.Action {
-        val intent = Intent(applicationContext, DownloaderService::class.java)
-        intent.putExtra("action", "OK")
-        val pi = PendingIntent.getService(applicationContext, OK_ACTION,
-                intent, PendingIntent.FLAG_UPDATE_CURRENT)
-        return NotificationCompat.Action(R.drawable.ic_check_black_30dp, "OK", pi)
-    }
-
     private fun onDownloadFinished() {
         val intent = Intent(ACTION_DOWNLOAD_COMPLETE)
         intent.putExtra(EXTRA_MOVIE, movie)
@@ -339,7 +334,6 @@ class DownloaderService: Service(), TorrentSessionListener {
             DownloadsPresenter.getInstance().updateDownloadProgress(it)
         }
 
-        stopForeground(true)
         stopSelf()
     }
 
@@ -448,9 +442,9 @@ class DownloaderService: Service(), TorrentSessionListener {
     private fun showFinishedNotification() {
         notificationView?.setTextViewText(R.id.tvInfo, "Downloaded Complete")
         builder?.mActions?.clear()
-        builder?.addAction(getOkAction())
         builder?.setOngoing(false)
         builder?.setAutoCancel(true)
+        builder?.setTicker("Download Complete")
         val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         builder?.setSound(uri, AudioManager.STREAM_NOTIFICATION)
         notificationManager?.notify(FINISHED_NOTIFICATION_ID, builder?.build())

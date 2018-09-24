@@ -41,6 +41,8 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     private var spinnerCallCheck = 0
 
+    private var viewCreatedAt: Long = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setHasOptionsMenu(true)
         super.onCreate(savedInstanceState)
@@ -110,13 +112,14 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             genreSpinnerAdapter.setDropDownViewResource(android.R.layout
                     .simple_spinner_dropdown_item)
             spinnerGenre?.adapter = genreSpinnerAdapter
-            spinnerGenre?.onItemSelectedListener = onSpinnerItemSelected
 
             val sortingSpinnerAdapter = ArrayAdapter<String>(it,
                     android.R.layout.simple_spinner_item, sortingOptionsKeys!!)
             sortingSpinnerAdapter.setDropDownViewResource(android.R.layout
                     .simple_spinner_dropdown_item)
             spinnerSortBy?.adapter = sortingSpinnerAdapter
+
+            spinnerGenre?.onItemSelectedListener = onSpinnerItemSelected
             spinnerSortBy?.onItemSelectedListener = onSpinnerItemSelected
         } ?: return
 
@@ -138,6 +141,8 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             loadingFirstTime = false
             performSearch(lastSearched, lastPageNumber)
         }
+
+        viewCreatedAt = System.currentTimeMillis()
     }
 
     override fun onDestroyView() {
@@ -152,7 +157,8 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     private val onSpinnerItemSelected = object: AdapterView.OnItemSelectedListener{
         override fun onItemSelected(parent: AdapterView<*>?,
                                     view: View?, position: Int, id: Long) {
-            if(++spinnerCallCheck > 2) {
+            if(++spinnerCallCheck > 2 && viewCreatedAt > 0
+                    && System.currentTimeMillis() - viewCreatedAt > 1000) {
                 lastPageNumber = 1
                 performSearch(lastSearched, lastPageNumber)
             }
@@ -233,7 +239,10 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     }
 
     fun onBackPressed(): Boolean {
-        return if(isProgressOrErrorVisible()) {
+        return if(viewCreatedAt == 0L
+            || System.currentTimeMillis() - viewCreatedAt < 2000) {
+            true
+        } else if(isProgressOrErrorVisible()) {
             searchPresenter.abort()
             hideProgress()
             true

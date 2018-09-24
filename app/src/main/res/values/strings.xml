@@ -43,4 +43,6 @@
     <string name="download_0_kb_s">Download: 0 KB/s</string>
     <string name="upload_0_kb_s">Upload: 0 KB/s</string>
     <string name="uploader">Uploader</string>
+    <string name="hollywood">Hollywood</string>
+    <string name="others">Others</string>
 </resources>

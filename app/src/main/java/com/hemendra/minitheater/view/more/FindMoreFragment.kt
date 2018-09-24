@@ -83,6 +83,7 @@ class FindMoreFragment: Fragment(), IFindMoreFragment {
             hideKeyboard()
             dockSearchViewToTop()
             recycler?.visibility = View.VISIBLE
+            tvInstructions?.visibility = View.GONE
             searchPresenter.performSearch(query, pageNumber)
         } else {
             context?.let { showMessage(it, "Enter Movie Name to Search") }

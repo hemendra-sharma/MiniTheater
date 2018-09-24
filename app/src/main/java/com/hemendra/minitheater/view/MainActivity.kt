@@ -8,6 +8,7 @@ import android.support.v7.widget.Toolbar
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.View
+import android.widget.Toast
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.presenter.ImagesPresenter
@@ -180,20 +181,18 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    /*override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
-        if(event?.keyCode == KeyEvent.KEYCODE_BACK) {
-            if(event.action == KeyEvent.ACTION_UP)
-                onBackPressed()
-            return true
-        }
-        return super.dispatchKeyEvent(event)
-    }*/
+    private var firstBackPressedAt = 0L
 
     override fun onBackPressed() {
         when(currentFragmentTag()) {
             EXPLORER_FRAGMENT_TAG -> {
                 if(explorerFragment.onBackPressed()) return
-                finish()
+                if(System.currentTimeMillis() - firstBackPressedAt < 2000)
+                    finish()
+                else {
+                    firstBackPressedAt = System.currentTimeMillis()
+                    Toast.makeText(this, "Press Back Again to Exit !", Toast.LENGTH_SHORT).show()
+                }
                 return
             }
             FIND_MORE_FRAGMENT_TAG -> if(findMoreFragment.onBackPressed()) return
