@@ -125,7 +125,7 @@ class Utils {
          */
         fun writeToFile(obj: Any, file: File): Boolean {
             val data = getSerializedData(obj)
-            return data != null && writeToFile(data, file)
+            return data != null && data.isNotEmpty() && writeToFile(data, file)
         }
 
         /**

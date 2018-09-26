@@ -34,4 +34,5 @@ class DownloadsListAdapter(var movies: ArrayList<Movie>,
         super.onViewDetachedFromWindow(holder)
         holder.unregisterReceiver()
     }
+
 }

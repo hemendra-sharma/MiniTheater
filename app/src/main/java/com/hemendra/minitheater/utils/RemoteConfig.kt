@@ -59,19 +59,28 @@ class RemoteConfig private constructor() {
     private var extraMovieRedirectReplace: String = ""
     private var extraMovieRedirectReplaceWith: String = ""
 
-    private var documentReadCount = 0
+    private var shareLink: String = ""
+    private var shareMessage: String = ""
+    private var sharePositiveText: String = ""
+    private var shareNegativeText: String = ""
+
+    private var updateLink: String = ""
+    private var updateMessage: String = ""
+    private var updateVersionCode: Long = 0
+
+    private val gotList = ArrayList<String>()
 
     private var listener: OnCompleteListener<QuerySnapshot> = OnCompleteListener {
         if(it.isSuccessful) {
             for(document in it.result) {
+                if(!gotList.contains(document.id)) gotList.add(document.id)
+
                 when(document.id) {
                     "key" -> {
-                        documentReadCount++
                         headerParameterName = document["param"] as String
                         headerParameterValue = document["key"] as String
                     }
                     "all_movies" -> {
-                        documentReadCount++
                         allMoviesURL = document["all_movies_url"] as String
                         allMoviesPageParameterName = document["all_movies_param_page"] as String
                         allMoviesLimitParameterName = document["all_movies_param_limit"] as String
@@ -88,24 +97,20 @@ class RemoteConfig private constructor() {
                                 document["all_movies_param_genre_list"] as String
                     }
                     "get_image" -> {
-                        documentReadCount++
                         imageURL = document["get_image_url"] as String
                         imagePartToExclude = document["get_image_part_to_exclude"] as String
                         imageStringToReplace = document["get_image_string_to_replace"] as String
                     }
                     "get_torrent" -> {
-                        documentReadCount++
                         torrentURL = document["url"] as String
                         torrentStringToReplace = document["string_to_replace"] as String
                     }
                     "magnet" -> {
-                        documentReadCount++
                         magnetURL = document["magnet_url"] as String
                         magnetReplaceHash = document["hash_replace"] as String
                         magnetReplaceMovieName = document["movie_name_replace"] as String
                     }
                     "extra_movies" -> {
-                        documentReadCount++
                         extraMovieSearchURL = document["extra_movies_search_url"] as String
                         extraMovieQueryParam = document["extra_movies_query_param"] as String
                         extraMoviePageParam = document["extra_movies_page_param"] as String
@@ -114,11 +119,23 @@ class RemoteConfig private constructor() {
                         extraMovieRedirectReplaceWith =
                                 document["extra_movies_redirect_replace_with"] as String
                     }
+                    "share" -> {
+                        shareLink = document["share_link"] as String
+                        shareMessage = document["share_message"] as String
+                        sharePositiveText = document["share_positive_text"] as String
+                        shareNegativeText = document["share_negative_text"] as String
+                    }
+                    "update" -> {
+                        updateLink = document["update_link"] as String
+                        updateMessage = document["update_message"] as String
+                        updateVersionCode = document["update_version_code"] as Long
+                    }
                 }
             }
-            if(documentReadCount >= 6) {
+            if(gotList.size >= 8) {
                 isInitialized = true
                 onInitialized?.run()
+                onInitialized = null
             }
         } else {
             onInitializationFailed?.run()
@@ -130,6 +147,7 @@ class RemoteConfig private constructor() {
         this.onInitialized = onInitialized
         this.onInitializationFailed = onInitializationFailed
         db.collection("urls").get().addOnCompleteListener(listener)
+        db.collection("messages").get().addOnCompleteListener(listener)
     }
 
     fun getSecurityHeaderKey(): String = headerParameterName
@@ -252,5 +270,23 @@ class RemoteConfig private constructor() {
         }
         return list
     }
+
+    fun getSharingLink(): String = shareLink
+
+    fun getSharingMessage(): String {
+        return shareMessage.replace("\\n", "\n")
+    }
+
+    fun getSharingPositiveText(): String = sharePositiveText
+
+    fun getSharingNegativeText(): String = shareNegativeText
+
+    fun getUpdateLink(): String = updateLink
+
+    fun getUpdateMessage(): String {
+        return updateMessage.replace("\\n", "\n")
+    }
+
+    fun getUpdateVersionCode(): Long = updateVersionCode
 
 }

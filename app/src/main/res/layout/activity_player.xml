@@ -38,7 +38,7 @@
         android:layout_marginTop="10dp"
         android:layout_marginStart="10dp"
         android:text="@string/app_name"
-        android:textColor="#aeaeae"
+        android:textColor="#bfbfbf"
         android:textSize="@dimen/textSize14"
         android:visibility="visible"/>
 
@@ -98,9 +98,92 @@
         android:layout_alignParentStart="true"
         android:contentDescription="@string/subtitles"
         android:src="@drawable/ic_subtitles_white_40dp"
-        android:tint="#aeaeae"
+        android:tint="#bfbfbf"
         android:layout_marginStart="10dp"
         android:layout_marginTop="10dp"/>
+
+    <LinearLayout
+        android:id="@+id/llSubtitlesDelay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_toEndOf="@+id/ivSubtitles"
+        android:layout_alignTop="@+id/ivSubtitles"
+        android:layout_alignBottom="@+id/ivSubtitles"
+        android:layout_marginStart="10dp">
+
+        <ImageView
+            android:id="@+id/ivSubtitlesMinus"
+            android:layout_width="30dp"
+            android:layout_height="match_parent"
+            android:src="@drawable/ic_minus_black_24dp"
+            android:tint="#bfbfbf"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/minus"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvSubtitlesDelayTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="@string/subtitles_delay"
+                android:textColor="#bfbfbf"
+                android:textSize="@dimen/textSize12"/>
+
+            <TextView
+                android:id="@+id/tvSubtitlesDelay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="0 ms"
+                android:textColor="#bfbfbf"
+                android:textSize="@dimen/textSize12"/>
+
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/ivSubtitlesPlus"
+            android:layout_width="30dp"
+            android:layout_height="match_parent"
+            android:src="@drawable/ic_plus_black_24dp"
+            android:tint="#bfbfbf"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/minus"/>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:text="Volume 100%"
+        android:textColor="#bfbfbf"
+        android:textSize="@dimen/textSize24"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:clickable="false"
+        android:visibility="gone"/>
+
+    <ImageView
+        android:id="@+id/ivLock"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:contentDescription="@string/lock"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="?android:actionBarSize"
+        android:tint="#bfbfbf"
+        android:src="@drawable/ic_lock_open_black_24dp"/>
 
     <RelativeLayout
         android:id="@+id/rlProgress"
@@ -114,6 +197,37 @@
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_centerInParent="true"/>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rlHints"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#aa000000"
+        android:clickable="true"
+        android:focusableInTouchMode="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
+            android:contentDescription="@string/hint"
+            android:src="@drawable/player_hint"/>
+
+        <TextView
+            android:id="@+id/tvGotIt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Got It"
+            android:textColor="#ff0000"
+            android:textSize="25sp"
+            android:padding="15dp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="20dp"
+            android:background="#232323"/>
 
     </RelativeLayout>
 

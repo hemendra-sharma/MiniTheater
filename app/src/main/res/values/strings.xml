@@ -45,4 +45,8 @@
     <string name="uploader">Uploader</string>
     <string name="hollywood">Hollywood</string>
     <string name="others">Others</string>
+    <string name="minus">Minus</string>
+    <string name="subtitles_delay">Subtitles Delay</string>
+    <string name="lock">Lock</string>
+    <string name="hint">Hint</string>
 </resources>

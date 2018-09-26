@@ -1,15 +1,15 @@
 package com.hemendra.minitheater.view.player
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.res.Configuration
+import android.media.AudioManager
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
+import android.provider.Settings
 import android.support.v4.content.LocalBroadcastManager
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
@@ -46,22 +46,19 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
     private var mediaPlayer: MediaPlayer? = null
     private var mediaController: MediaController? = null
-
     private var isVideoReadyToBePlayed = false
     private var movie: Movie? = null
     private var movieFile: File? = null
-
     private val handler = Handler()
-
     private var mediaPlayerPrepared = false
-
     private var clickDetector: GestureDetector? = null
-
     private var positionBeforePaused = 0
-
     private var activityShowing = false
-
+    private var pausedByUser = false
     private var subtitlesAdapter: SubtitlesListAdapter? = null
+    private var screenWidth: Int = 0
+    private var screenHeight: Int = 0
+    private var controlsLocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -73,14 +70,60 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
 
+        volumeControlStream = AudioManager.STREAM_MUSIC
+
         movie = intent.getSerializableExtra("movie") as Movie
 
         surfaceView.holder.addCallback(this)
         llHolder.setOnTouchListener(this)
+
+        setupSubtitlesView()
+        setupGestures()
+        setupLock()
+
+        showSystemUI()
+
+        showHints()
+    }
+
+    private fun showHints() {
+        val prefs = getSharedPreferences("PlayerHint", Context.MODE_PRIVATE)
+        if(prefs?.getBoolean("hint_shown", false) == false) {
+            rlHints.visibility = View.VISIBLE
+            tvGotIt.setOnClickListener { rlHints.visibility = View.GONE }
+            prefs.edit().putBoolean("hint_shown", true).apply()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activityShowing = true
+        val mgr = LocalBroadcastManager.getInstance(applicationContext)
+        val filter = IntentFilter(DownloaderService.ACTION_PROGRESS_UPDATE)
+        mgr.registerReceiver(downloadReceiver, filter)
+        if(!pausedByUser) mediaPlayer?.start()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        activityShowing = false
+        mediaPlayer?.pause()
+        val mgr = LocalBroadcastManager.getInstance(applicationContext)
+        mgr.unregisterReceiver(downloadReceiver)
+        movie?.watchingProgress = mediaPlayer?.currentPosition ?: 0
+        movie?.let {
+            it.watchingProgress = mediaPlayer?.currentPosition ?: 0
+            DownloadsPresenter.getInstance().updateMovie(it)
+        }
+    }
+
+    private fun setupSubtitlesView() {
         if(movie?.movieObjectType == MovieObjectType.EXTRA) {
             ivSubtitles.visibility = View.GONE
+            llSubtitlesDelay.visibility = View.GONE
         } else {
             ivSubtitles.visibility = View.VISIBLE
+            llSubtitlesDelay.visibility = View.VISIBLE
             ivSubtitles.setOnClickListener { _ ->
                 if (rlSubtitles.visibility == View.VISIBLE) {
                     rlSubtitles.visibility = View.GONE
@@ -88,6 +131,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                     rlSubtitles.visibility = View.VISIBLE
                     mediaController?.hide()
                     tvDownloadInfo.visibility = View.GONE
+                    ivLock.visibility = View.GONE
                     if (pbSubtitles.visibility == View.VISIBLE) {
                         movie?.let {
                             SubtitlesPresenter.getInstance().getSubtitlesList(it,
@@ -107,54 +151,35 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                     }
                 }
             }
+
+            ivSubtitlesMinus.setOnClickListener { _ ->
+                subtitleView.decreaseDelayMS()
+                val delay = subtitleView.getDelayMS()
+                if(delay > 0) tvSubtitlesDelay.text =
+                        String.format(Locale.getDefault(), "+ %s ms", delay)
+                else tvSubtitlesDelay.text =
+                        String.format(Locale.getDefault(), "%s ms", delay)
+            }
+
+            ivSubtitlesPlus.setOnClickListener { _ ->
+                subtitleView.increaseDelayMS()
+                val delay = subtitleView.getDelayMS()
+                if(delay > 0) tvSubtitlesDelay.text =
+                        String.format(Locale.getDefault(), "+ %s ms", delay)
+                else tvSubtitlesDelay.text =
+                        String.format(Locale.getDefault(), "%s ms", delay)
+            }
         }
 
-        lvSubtitles.onItemClickListener = listItemClickListener
-
-        clickDetector = GestureDetector(this,
-                object : GestureDetector.SimpleOnGestureListener() {
-                    override fun onSingleTapUp(e: MotionEvent): Boolean {
-                        if (mediaController?.isShowing == true) {
-                            hideSystemUI()
-                            mediaController?.hide()
-                            ivSubtitles.visibility = View.GONE
-                            tvDownloadInfo.visibility = View.GONE
-                        } else {
-                            showSystemUI()
-                            mediaController?.show(0)
-                            if(movie?.movieObjectType != MovieObjectType.EXTRA)
-                                ivSubtitles.visibility = View.VISIBLE
-                            tvDownloadInfo.visibility = View.VISIBLE
-                        }
-                        rlSubtitles.visibility = View.GONE
-                        return true
-                    }
-                })
-
-        showSystemUI()
+        lvSubtitles.onItemClickListener = subtitlesListItemClickListener
     }
 
-    override fun onResume() {
-        super.onResume()
-        activityShowing = true
-        val mgr = LocalBroadcastManager.getInstance(applicationContext)
-        val filter = IntentFilter(DownloaderService.ACTION_PROGRESS_UPDATE)
-        mgr.registerReceiver(downloadReceiver, filter)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        activityShowing = false
-        mediaPlayer?.pause()
-        val mgr = LocalBroadcastManager.getInstance(applicationContext)
-        mgr.unregisterReceiver(downloadReceiver)
-    }
-
-    private val listItemClickListener = AdapterView.OnItemClickListener {
+    private val subtitlesListItemClickListener = AdapterView.OnItemClickListener {
         _, _, position, _ ->
         subtitlesAdapter?.let {
             rlSubtitles.visibility = View.GONE
             ivSubtitles.visibility = View.GONE
+            llSubtitlesDelay.visibility = View.GONE
             val subtitle = it.getItem(position)
             Toast.makeText(applicationContext, "Downloading Subtitles...",
                     Toast.LENGTH_SHORT).show()
@@ -202,8 +227,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
             subtitleView.setMediaPlayer(mp)
             subtitleView.setSubtitlesFile(subtitleFile)
             subtitleView.run()
-            Toast.makeText(applicationContext, "Subtitles Loaded",
-                    Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -217,6 +240,204 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
             return true
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun setupLock() {
+        ivLock.setOnClickListener { _ ->
+            controlsLocked = !controlsLocked
+            if(controlsLocked) {
+                ivLock.setImageResource(R.drawable.ic_lock_outline_black_24dp)
+                hideSystemUI()
+                mediaController?.hide()
+                ivSubtitles.visibility = View.GONE
+                llSubtitlesDelay.visibility = View.GONE
+                tvDownloadInfo.visibility = View.GONE
+                ivLock.visibility = View.GONE
+            } else {
+                ivLock.setImageResource(R.drawable.ic_lock_open_black_24dp)
+                showSystemUI()
+                mediaController?.show(0)
+                if (movie?.movieObjectType != MovieObjectType.EXTRA) {
+                    ivSubtitles.visibility = View.VISIBLE
+                    llSubtitlesDelay.visibility = View.VISIBLE
+                }
+                tvDownloadInfo.visibility = View.VISIBLE
+                ivLock.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private var initialSeekPosition = 0
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+        if(event?.action == MotionEvent.ACTION_UP) {
+            initialVolumeLevel = 0
+            maxVolumeLevel = 0
+            initialBrightnessLevel = 0
+            initialSeekPosition = 0
+            tvInfo.visibility = View.GONE
+        }
+        if(clickDetector?.onTouchEvent(event) == true) {
+            return true
+        }
+        return false
+    }
+
+    private fun setupGestures() {
+        clickDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                if(controlsLocked) {
+                    if(ivLock.visibility == View.VISIBLE)
+                        ivLock.visibility = View.GONE
+                    else
+                        ivLock.visibility = View.VISIBLE
+                } else {
+                    if (mediaController?.isShowing == true) {
+                        hideSystemUI()
+                        mediaController?.hide()
+                        ivSubtitles.visibility = View.GONE
+                        llSubtitlesDelay.visibility = View.GONE
+                        tvDownloadInfo.visibility = View.GONE
+                        ivLock.visibility = View.GONE
+                    } else {
+                        showSystemUI()
+                        mediaController?.show(0)
+                        if (movie?.movieObjectType != MovieObjectType.EXTRA) {
+                            ivSubtitles.visibility = View.VISIBLE
+                            llSubtitlesDelay.visibility = View.VISIBLE
+                        }
+                        tvDownloadInfo.visibility = View.VISIBLE
+                        ivLock.visibility = View.VISIBLE
+                    }
+                    rlSubtitles.visibility = View.GONE
+                }
+                return true
+            }
+
+            override fun onScroll(e1: MotionEvent?, e2: MotionEvent?,
+                                  distanceX: Float, distanceY: Float): Boolean {
+                if(controlsLocked)
+                    return false
+
+                e1?.let { event1 ->
+                    e2?.let { event2 ->
+                        if(event1.rawY < screenHeight.toFloat() * 0.9f
+                            && event2.rawY < screenHeight.toFloat() * 0.9f) {
+                            // volume and brightness controls
+                            val diffY = event1.rawY - event2.rawY
+                            val singleStep = screenHeight.toFloat() / 100f
+                            val percentChange = diffY / singleStep
+
+                            if (event1.rawX > screenWidth / 2
+                                    && event2.rawX > screenWidth / 2) {
+                                // volume controls
+                                if (initialVolumeLevel == 0
+                                        || maxVolumeLevel == 0) {
+                                    saveInitialVolumeLevel()
+                                }
+                                changeVolumePercent(percentChange)
+                            } else if (event1.rawX < screenWidth / 2
+                                    && event2.rawX < screenWidth / 2) {
+                                // screen brightness
+                                if (initialBrightnessLevel == 0
+                                        || maxBrightnessLevel == 0) {
+                                    saveInitialBrightnessLevel()
+                                }
+                                changeBrightnessPercent(percentChange)
+                            }
+                            return true
+                        } else if(event1.rawY > screenHeight.toFloat() * 0.9f
+                                && event2.rawY > screenHeight.toFloat() * 0.9f) {
+                            mediaPlayer?.let {
+                                // seek controls
+                                val multiplier = 10f // seek slower. take bigger steps.
+                                val diffX = event2.rawX - event1.rawX
+                                val singleStep = (screenWidth.toFloat() / 100f) * multiplier
+                                val percent = diffX / singleStep
+                                if(initialSeekPosition == 0)
+                                    initialSeekPosition = it.currentPosition
+                                else {
+                                    val change = ((Math.abs(percent) / 100f) *
+                                            it.duration.toFloat()).toInt()
+                                    val newPosition = if(percent < 0) initialSeekPosition - change
+                                    else initialSeekPosition + change
+                                    seekTo(newPosition)
+                                    if(percent > 0)
+                                        tvInfo.text = String.format(Locale.getDefault(),
+                                                "+ %d seconds", change / 1000)
+                                    else
+                                        tvInfo.text = String.format(Locale.getDefault(),
+                                                "- %d seconds", change / 1000)
+                                    tvInfo.visibility = View.VISIBLE
+                                }
+                                return true
+                            }
+                        }
+                    }
+                }
+                return false
+            }
+        })
+    }
+
+    private var initialVolumeLevel = 0
+    private var maxVolumeLevel = 0
+    private fun saveInitialVolumeLevel() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
+        audioManager?.let {
+            initialVolumeLevel = it.getStreamVolume(AudioManager.STREAM_MUSIC)
+            maxVolumeLevel = it.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        }
+    }
+
+    private fun changeVolumePercent(percent: Float) {
+        val changeLevel = ((Math.abs(percent) / 100f) * maxVolumeLevel.toFloat()).toInt()
+        var newLevel = if(percent < 0) initialVolumeLevel - changeLevel
+        else initialVolumeLevel + changeLevel
+        if(newLevel < 0) newLevel = 0
+        else if(newLevel > maxVolumeLevel) newLevel = maxVolumeLevel
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
+        audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, newLevel, 0)
+        val newPercent = ((newLevel.toFloat() / maxVolumeLevel.toFloat()) * 100f).toInt()
+        tvInfo.text = String.format(Locale.getDefault(), "Volume %d%%", newPercent)
+        tvInfo.visibility = View.VISIBLE
+    }
+
+    private var initialBrightnessLevel = 0
+    private val maxBrightnessLevel = 255
+    private var brightnessMessageShowing = false
+    private fun saveInitialBrightnessLevel() {
+        initialBrightnessLevel = Settings.System.getInt(contentResolver,
+                Settings.System.SCREEN_BRIGHTNESS)
+    }
+
+    private fun changeBrightnessPercent(percent: Float) {
+        if(Settings.System.canWrite(applicationContext)) {
+            val changeLevel = ((Math.abs(percent) / 100f) * maxBrightnessLevel.toFloat()).toInt()
+            var newLevel = if(percent < 0) initialBrightnessLevel - changeLevel
+            else initialBrightnessLevel + changeLevel
+            if(newLevel <= 0) newLevel = 1
+            else if(newLevel > maxBrightnessLevel) newLevel = maxBrightnessLevel
+
+            Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+            Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, newLevel)
+
+            val newPercent = ((newLevel.toFloat() / maxBrightnessLevel.toFloat()) * 100f).toInt()
+            tvInfo.text = String.format(Locale.getDefault(), "Brightness %d%%", newPercent)
+            tvInfo.visibility = View.VISIBLE
+        } else if(!brightnessMessageShowing) {
+            brightnessMessageShowing = true
+            showMessage(this, "The app requires permission to change screen brightness.",
+                    Runnable {
+                        val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
+                        intent.data = Uri.parse("package:$packageName")
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivityForResult(intent, 1001)
+                        brightnessMessageShowing = false
+                    })
+        }
     }
 
     private fun hideSystemUI() {
@@ -233,14 +454,6 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         window.decorView.systemUiVisibility = (
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-        if(clickDetector?.onTouchEvent(event) == true) {
-            return true
-        }
-        return false
     }
 
     private val downloadReceiver = object: BroadcastReceiver() {
@@ -277,7 +490,8 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
     }
 
     override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-
+        screenWidth = width
+        screenHeight = height
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder?) {
@@ -325,6 +539,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
             } ?: return
         } ?: return
         mediaPlayer?.setDisplay(surfaceView.holder)
+        mediaPlayer?.setVolume(1f, 1f)
         mediaPlayer?.setOnBufferingUpdateListener(this)
         mediaPlayer?.setOnCompletionListener(this)
         mediaPlayer?.setOnPreparedListener(this)
@@ -411,6 +626,10 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
         adjustSurfaceSize()
         mediaPlayer?.start()
+        if(movie?.watchingProgress ?: 0 > 0) {
+            seekTo(movie?.watchingProgress ?: 0)
+        }
+        pausedByUser = false
         rlProgress.visibility = View.GONE
         mediaPlayerPrepared = true
 
@@ -480,6 +699,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
     override fun pause() {
         mediaPlayer?.pause()
+        pausedByUser = true
     }
 
     override fun getBufferPercentage(): Int {
@@ -512,6 +732,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
     override fun start() {
         mediaPlayer?.start()
+        pausedByUser = false
     }
 
     override fun getAudioSessionId(): Int  = 0

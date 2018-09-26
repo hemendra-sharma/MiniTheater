@@ -14,7 +14,7 @@ import com.hemendra.minitheater.view.listeners.ImageLoaderCallback
 import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import java.util.*
 
-class MovieViewHolder(view: View, private val listener: OnMovieItemClickListener,
+class MovieViewHolder(val view: View, private val listener: OnMovieItemClickListener,
                       private val imagesPresenter: ImagesPresenter):
         RecyclerView.ViewHolder(view), ImageLoaderCallback {
 

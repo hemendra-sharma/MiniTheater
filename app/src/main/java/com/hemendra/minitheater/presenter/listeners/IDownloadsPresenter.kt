@@ -15,7 +15,7 @@ interface IDownloadsPresenter {
     fun startDownload(context: Context, movie: Movie, stopOngoing: Boolean): DownloadFailureReason
     fun pauseOrResumeDownload(context: Context, movie: Movie): Boolean
     fun stopDownload(context: Context, movie: Movie): Boolean
-    fun updateDownloadProgress(movie: Movie)
+    fun updateMovie(movie: Movie)
     fun getTorrentFile(torrent: Torrent): File?
 
 }

@@ -185,7 +185,7 @@ class DownloaderService: Service(), TorrentSessionListener {
                 movie?.let {
                     it.isDownloading = true
                     it.isPaused = true
-                    DownloadsPresenter.getInstance().updateDownloadProgress(it)
+                    DownloadsPresenter.getInstance().updateMovie(it)
                 }
                 return true
             }
@@ -209,7 +209,7 @@ class DownloaderService: Service(), TorrentSessionListener {
                 movie?.let {
                     it.isDownloading = true
                     it.isPaused = false
-                    DownloadsPresenter.getInstance().updateDownloadProgress(it)
+                    DownloadsPresenter.getInstance().updateMovie(it)
                 }
                 return true
             } catch (e: IllegalArgumentException) {
@@ -249,7 +249,7 @@ class DownloaderService: Service(), TorrentSessionListener {
             m.isDownloading = false
             m.isPaused = false
             localBroadcastManager?.sendBroadcast(intent)
-            DownloadsPresenter.getInstance().updateDownloadProgress(m)
+            DownloadsPresenter.getInstance().updateMovie(m)
         }
         movie = null
         isRunning = false
@@ -331,7 +331,7 @@ class DownloaderService: Service(), TorrentSessionListener {
             it.downloadProgress = 1f
             it.isDownloading = false
             it.isPaused = false
-            DownloadsPresenter.getInstance().updateDownloadProgress(it)
+            DownloadsPresenter.getInstance().updateMovie(it)
         }
 
         stopSelf()
@@ -349,7 +349,7 @@ class DownloaderService: Service(), TorrentSessionListener {
             it.downloadSpeed = 0
             it.isDownloading = false
             it.isPaused = false
-            DownloadsPresenter.getInstance().updateDownloadProgress(it)
+            DownloadsPresenter.getInstance().updateMovie(it)
         }
     }
 
@@ -386,7 +386,7 @@ class DownloaderService: Service(), TorrentSessionListener {
                 intent.putExtra(EXTRA_MOVIE, m)
                 localBroadcastManager?.sendBroadcast(intent)
 
-                DownloadsPresenter.getInstance().updateDownloadProgress(m)
+                DownloadsPresenter.getInstance().updateMovie(m)
 
                 val str = String.format(Locale.getDefault(),
                         "%.2f%%, %d Seeds, D: %.2f KB/s, U: %.2f KB/s",

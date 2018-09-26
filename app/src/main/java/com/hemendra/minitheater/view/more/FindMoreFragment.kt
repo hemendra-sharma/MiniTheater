@@ -51,6 +51,11 @@ class FindMoreFragment: Fragment(), IFindMoreFragment {
         this.onMovieDownloadClickListener = listener
     }
 
+    private var queryToSearch: String? = null
+    fun setQueryToSearch(query: String?) {
+        queryToSearch = query
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
         savedView?.let { return it }
@@ -76,6 +81,13 @@ class FindMoreFragment: Fragment(), IFindMoreFragment {
         }
 
         tvProgress?.setOnClickListener { performSearch(lastSearched, lastPageNumber) }
+
+        queryToSearch?.let {
+            lastSearched = it
+            lastPageNumber = 1
+            etSearch?.setText(lastSearched)
+            performSearch(lastSearched, lastPageNumber)
+        }
     }
 
     private fun performSearch(query: String, pageNumber: Int) {
@@ -93,6 +105,10 @@ class FindMoreFragment: Fragment(), IFindMoreFragment {
     override fun onDestroyView() {
         (savedView?.parent as ViewGroup?)?.removeAllViews()
         super.onDestroyView()
+    }
+
+    fun destroy() {
+        savedView = null
     }
 
     override fun getCtx(): Context? = context

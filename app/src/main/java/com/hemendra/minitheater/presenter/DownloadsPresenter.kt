@@ -119,7 +119,7 @@ class DownloadsPresenter private constructor():
         } else false
     }
 
-    override fun updateDownloadProgress(movie: Movie) {
+    override fun updateMovie(movie: Movie) {
         if(downloadsList?.update(movie) == true) {
             saveState()
         }

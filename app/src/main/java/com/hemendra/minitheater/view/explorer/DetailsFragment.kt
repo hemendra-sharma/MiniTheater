@@ -51,6 +51,7 @@ class DetailsFragment: Fragment() {
         context ?: return
 
         tvTitle?.text = movie?.title
+        ivCover?.setImageBitmap(null)
         ImagesPresenter.getInstance(context!!)
                 .loadCoverImage(movie!!, object : ImageLoaderCallback {
             override fun onImageLoaded(url: String, image: Bitmap) {
@@ -66,10 +67,13 @@ class DetailsFragment: Fragment() {
         if(movie?.genres?.size ?: 0 == 0) tvGenres?.visibility = View.GONE
         else fillGenres()
 
-        if(movie?.yt_trailer_code?.isNotEmpty() == true)
+        if(movie?.yt_trailer_code?.isNotEmpty() == true) {
             tvTrailer?.setOnClickListener(watchTrailerClicked)
-        else
+            tvTrailer?.visibility = View.VISIBLE
+        } else {
+            tvTrailer?.setOnClickListener(null)
             tvTrailer?.visibility = View.GONE
+        }
 
         fillTorrentsLayout()
     }
@@ -78,6 +82,10 @@ class DetailsFragment: Fragment() {
         context?.let { ImagesPresenter.getInstance(it).abortAll() }
         (savedView?.parent as ViewGroup?)?.removeAllViews()
         super.onDestroyView()
+    }
+
+    fun destroy() {
+        savedView = null
     }
 
     private fun fillGenres() {

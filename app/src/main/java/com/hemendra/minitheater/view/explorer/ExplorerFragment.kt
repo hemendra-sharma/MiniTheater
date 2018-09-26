@@ -21,6 +21,7 @@ import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import kotlinx.android.synthetic.main.fragment_explorer.*
 import android.widget.ArrayAdapter
 import com.hemendra.minitheater.utils.RemoteConfig
+import com.hemendra.minitheater.view.listeners.OtherSearchListener
 import java.util.*
 
 
@@ -36,12 +37,20 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     private var sortingOptions: HashMap<String,String>? = null
     private var sortingOptionsKeys: ArrayList<String>? = null
 
+    private var searchMenuItem: MenuItem? = null
+    private var searchView: SearchView? = null
+
     private var savedView: View? = null
     private var loadingFirstTime = true
 
     private var spinnerCallCheck = 0
 
     private var viewCreatedAt: Long = 0
+
+    private var otherSearchListener: OtherSearchListener? = null
+    fun setOtherSearchListener(listener: OtherSearchListener) {
+        otherSearchListener = listener
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setHasOptionsMenu(true)
@@ -59,14 +68,14 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
         // Associate searchable configuration with the SearchView
         val searchManager = context?.getSystemService(Context.SEARCH_SERVICE) as SearchManager
-        val searchMenuItem = menu.findItem(R.id.action_search)
-        val searchView: SearchView = searchMenuItem.actionView as SearchView
+        searchMenuItem = menu.findItem(R.id.action_search)
+        searchView = searchMenuItem?.actionView as SearchView?
         //val settingsItem = menu.findItem(R.id.action_settings)
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(activity?.componentName))
+        searchView?.setSearchableInfo(searchManager.getSearchableInfo(activity?.componentName))
 
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
+        searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
             override fun onQueryTextSubmit(query: String): Boolean {
-                searchView.clearFocus()
+                searchView?.clearFocus()
                 lastSearched = query
                 lastPageNumber = 1
                 performSearch(query, lastPageNumber)
@@ -76,7 +85,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             override fun onQueryTextChange(query: String): Boolean  = false
         })
 
-        searchMenuItem.setOnActionExpandListener(object: MenuItem.OnActionExpandListener{
+        searchMenuItem?.setOnActionExpandListener(object: MenuItem.OnActionExpandListener{
             override fun onMenuItemActionExpand(item: MenuItem?): Boolean = true
             override fun onMenuItemActionCollapse(item: MenuItem?): Boolean {
                 if(lastSearched.isNotEmpty()) {
@@ -135,6 +144,14 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             })
         }
 
+        if(lastSearched.isNotEmpty()) {
+            searchView?.post {
+                searchMenuItem?.expandActionView()
+                searchView?.setQuery(lastSearched, false)
+                searchView?.clearFocus()
+            }
+        }
+
         tvProgress?.setOnClickListener { performSearch(lastSearched, lastPageNumber) }
 
         if(loadingFirstTime) {
@@ -143,6 +160,19 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         }
 
         viewCreatedAt = System.currentTimeMillis()
+
+        tvSearchOthers?.setOnTouchListener { v, event ->
+            if(event.action == MotionEvent.ACTION_DOWN)
+                v.requestFocus()
+            false
+        }
+
+        tvSearchOthers?.setOnClickListener {
+            otherSearchListener?.searchOthers(lastSearched)
+            hideProgress()
+            lastSearched = ""
+            lastPageNumber = 1
+        }
     }
 
     override fun onDestroyView() {
@@ -152,6 +182,10 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
         spinnerGenre?.onItemSelectedListener = null
         spinnerSortBy?.onItemSelectedListener = null
         super.onDestroyView()
+    }
+
+    fun destroy() {
+        savedView = null
     }
 
     private val onSpinnerItemSelected = object: AdapterView.OnItemSelectedListener{
@@ -216,7 +250,12 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
             MoviesDataSourceFailureReason.NO_INTERNET_CONNECTION -> showError("No Internet Connection!")
             MoviesDataSourceFailureReason.NO_SEARCH_RESULTS -> {
                 adapter?.endReached()
-                if(lastPageNumber == 1) showError("No Search Results!")
+                if(lastPageNumber == 1) {
+                    showError("'$lastSearched' Not found in Hollywood movies")
+                    tvSearchOthers?.text = String.format(Locale.getDefault(),
+                            "Search other places for '$lastSearched' ?")
+                    tvSearchOthers?.visibility = View.VISIBLE
+                }
             }
             MoviesDataSourceFailureReason.ALREADY_LOADING -> {
                 if(lastPageNumber > 1) lastPageNumber--
@@ -240,7 +279,7 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
 
     fun onBackPressed(): Boolean {
         return if(viewCreatedAt == 0L
-            || System.currentTimeMillis() - viewCreatedAt < 2000) {
+            || System.currentTimeMillis() - viewCreatedAt < 1000) {
             true
         } else if(isProgressOrErrorVisible()) {
             searchPresenter.abort()
@@ -261,7 +300,8 @@ class ExplorerFragment: Fragment(), IExplorerFragment {
     }
 
     private fun hideProgress() {
-        rlProgress?.let { it.visibility = View.GONE }
+        rlProgress?.visibility = View.GONE
+        tvSearchOthers?.visibility = View.GONE
     }
 
     private fun showError(error: String) {

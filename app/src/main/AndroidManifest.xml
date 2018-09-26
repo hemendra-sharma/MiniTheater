@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"
+                     tools:ignore="ProtectedPermissions"/>
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -21,14 +24,15 @@
             android:configChanges="screenSize|orientation"
             android:launchMode="singleInstance"
             android:windowSoftInputMode="adjustPan">
-
             <meta-data
                 android:name="android.app.searchable"
                 android:resource="@xml/searchable"/>
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
+
                 <category android:name="android.intent.category.LAUNCHER"/>
+
                 <action android:name="android.intent.action.SEARCH"/>
             </intent-filter>
         </activity>
@@ -52,10 +56,10 @@
 
         <activity
             android:name=".view.player.PlayerActivity"
-            android:screenOrientation="sensorLandscape"
             android:configChanges="screenSize|orientation|keyboardHidden"
-            android:windowSoftInputMode="stateAlwaysHidden"
-            android:theme="@style/PlayerTheme">
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/PlayerTheme"
+            android:windowSoftInputMode="stateAlwaysHidden">
         </activity>
 
     </application>

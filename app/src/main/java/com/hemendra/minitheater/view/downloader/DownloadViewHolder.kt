@@ -7,7 +7,6 @@ import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.support.v4.content.LocalBroadcastManager
 import android.support.v7.widget.RecyclerView
-import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -48,8 +47,8 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
 
         updateProgress(m)
 
-        view.setOnClickListener{
-            listener.onItemClicked(m)
+        view.setOnClickListener{ _ ->
+            movie?.let { listener.onItemClicked(it) }
         }
         ivExternalVideo.setOnClickListener {
             listener.onExternalClicked(m)
@@ -81,7 +80,6 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         if(movie?.torrents?.get(0)?.size?.isEmpty() == true) {
             movie?.torrents?.get(0)?.size = m.torrents[0].size
             movie?.torrents?.get(0)?.size_bytes = m.torrents[0].size_bytes
-            saveProgress()
         }
 
         if(m.torrents[0].quality.isNotEmpty())
@@ -154,7 +152,6 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
     }
 
     fun unregisterReceiver() {
-        saveProgress()
         val mgr = LocalBroadcastManager.getInstance(view.context)
         mgr.unregisterReceiver(downloadReceiver)
     }
@@ -164,7 +161,7 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
             it.downloadSeeds = 0
             it.downloadSpeed = 0
             it.uploadSpeed = 0
-            DownloadsPresenter.getInstance().updateDownloadProgress(it)
+            DownloadsPresenter.getInstance().updateMovie(it)
         }
     }
 

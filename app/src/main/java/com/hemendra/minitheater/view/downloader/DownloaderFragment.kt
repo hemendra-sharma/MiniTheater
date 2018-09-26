@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v4.content.FileProvider
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -59,7 +60,11 @@ class DownloaderFragment: Fragment() {
         super.onDestroyView()
     }
 
-    private fun loadFreshList() {
+    fun destroy() {
+        savedView = null
+    }
+
+    fun loadFreshList() {
         try {
             adapter?.let {
                 it.movies = downloadsPresenter.getDownloadsList()
@@ -69,7 +74,7 @@ class DownloaderFragment: Fragment() {
             adapter = DownloadsListAdapter(downloadsPresenter.getDownloadsList(),
                     onDownloadItemClickListener)
             recycler?.let { it.adapter = adapter }
-        }finally {
+        } finally {
             recycler?.let { r ->
                 r.adapter?.let { a ->
                     if(a.itemCount > 0)

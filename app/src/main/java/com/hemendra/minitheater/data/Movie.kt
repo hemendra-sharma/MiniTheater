@@ -50,6 +50,8 @@ class Movie: Serializable {
 
     var movieObjectType = MovieObjectType.DEFAULT
 
+    var watchingProgress: Int = 0
+
     fun clone(): Movie {
         val movie = Movie()
 
@@ -95,6 +97,8 @@ class Movie: Serializable {
 
         movie.movieObjectType = movieObjectType
 
+        movie.watchingProgress = watchingProgress
+
         return movie
     }
 
@@ -126,6 +130,15 @@ class Movie: Serializable {
         result = 31 * result + date_uploaded.hashCode()
         result = 31 * result + date_uploaded_unix.hashCode()
         return result
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Movie
+
+        return id == other.id
     }
 
 }

@@ -1,14 +1,16 @@
 package com.hemendra.minitheater.view
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
-import android.view.KeyEvent
 import android.view.Menu
 import android.view.View
 import android.widget.Toast
+import com.hemendra.minitheater.BuildConfig
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.presenter.ImagesPresenter
@@ -18,6 +20,7 @@ import com.hemendra.minitheater.view.explorer.ExplorerFragment
 import com.hemendra.minitheater.view.listeners.OnMovieDownloadClickListener
 import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import com.hemendra.minitheater.view.explorer.DetailsFragment
+import com.hemendra.minitheater.view.listeners.OtherSearchListener
 import com.hemendra.minitheater.view.more.FindMoreFragment
 import com.hemendra.minitheater.view.player.PlayerActivity
 import kotlinx.android.synthetic.main.activity_main.*
@@ -79,6 +82,55 @@ class MainActivity : AppCompatActivity() {
         showExplorerFragment()
         if(intent.getBooleanExtra("from_downloading_notification", false))
             navigation.selectedItemId = R.id.navigation_downloads
+
+        showSharingDialog()
+    }
+
+    private var dialogShown = false
+
+    private fun showSharingDialog() {
+        if(dialogShown) return
+
+        val prefs = getSharedPreferences("Launches", MODE_PRIVATE)
+        val count = prefs?.getInt("launch_count", 0) ?: 0
+        prefs?.edit()?.putInt("launch_count", count+1)?.apply()
+        if(count > 0 && count % 5 == 0) {
+            dialogShown = true
+            showCustomMessage(this,
+                    RemoteConfig.getInstance().getSharingMessage(),
+                    RemoteConfig.getInstance().getSharingPositiveText(),
+                    RemoteConfig.getInstance().getSharingNegativeText(),
+                    Runnable {
+                        val shareBody = RemoteConfig.getInstance().getSharingLink()
+                        val shareIntent = Intent(Intent.ACTION_SEND)
+                        shareIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        shareIntent.type = "text/plain"
+                        shareIntent.putExtra(Intent.EXTRA_SUBJECT,
+                                "${getString(R.string.app_name)} (Download the App)")
+                        shareIntent.putExtra(Intent.EXTRA_TEXT, shareBody)
+                        shareIntent.resolveActivity(packageManager)?.let {
+                            startActivity(Intent.createChooser(shareIntent, "Share"))
+                        }
+                    })
+        } else {
+            checkUpdate()
+        }
+    }
+
+    private fun checkUpdate() {
+        val currentVersionCode = BuildConfig.VERSION_CODE.toLong()
+        if(currentVersionCode < RemoteConfig.getInstance().getUpdateVersionCode()) {
+            dialogShown = true
+            showCustomMessage(this,
+                    RemoteConfig.getInstance().getUpdateMessage(),
+                    "Update Now", "Do it Later",
+                    Runnable {
+                        val intent = Intent(Intent.ACTION_VIEW)
+                        intent.data = Uri.parse(RemoteConfig.getInstance().getUpdateLink())
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                    })
+        }
     }
 
     /**
@@ -120,7 +172,7 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.navigation_search -> {
                 if(currentFragmentTag() != FIND_MORE_FRAGMENT_TAG) {
-                    showFindMoreFragment()
+                    showFindMoreFragment(null)
                 }
                 return@OnNavigationItemSelectedListener true
             }
@@ -167,6 +219,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val otherSearchListener = object : OtherSearchListener {
+        override fun searchOthers(query: String) {
+            showFindMoreFragment(query)
+            resetNavigationSelection()
+        }
+    }
+
     private val onMovieDownloadClickListener = object: OnMovieDownloadClickListener {
 
         override fun onDownloadClicked(movie: Movie) {
@@ -179,6 +238,13 @@ class MainActivity : AppCompatActivity() {
             showPlayerActivity(movie)
         }
 
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if(currentFragmentTag() == DOWNLOADS_FRAGMENT_TAG) {
+            downloaderFragment.loadFreshList()
+        }
     }
 
     private var firstBackPressedAt = 0L
@@ -207,6 +273,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showExplorerFragment() {
         val transaction = supportFragmentManager.beginTransaction()
+        explorerFragment.setOtherSearchListener(otherSearchListener)
         transaction.replace(R.id.place_holder, explorerFragment, EXPLORER_FRAGMENT_TAG)
         transaction.addToBackStack(EXPLORER_FRAGMENT_TAG)
         transaction.commitAllowingStateLoss()
@@ -221,9 +288,10 @@ class MainActivity : AppCompatActivity() {
         transaction.commitAllowingStateLoss()
     }
 
-    private fun showFindMoreFragment() {
+    private fun showFindMoreFragment(query: String?) {
         val transaction = supportFragmentManager.beginTransaction()
         findMoreFragment.setMovieDownloadClickListener(onMovieDownloadClickListener)
+        findMoreFragment.setQueryToSearch(query)
         transaction.replace(R.id.place_holder, findMoreFragment, FIND_MORE_FRAGMENT_TAG)
         transaction.addToBackStack(FIND_MORE_FRAGMENT_TAG)
         transaction.commitAllowingStateLoss()
@@ -249,6 +317,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         ImagesPresenter.getInstance(this).close()
+        explorerFragment.destroy()
+        detailsFragment.destroy()
+        findMoreFragment.destroy()
+        downloaderFragment.destroy()
         super.onDestroy()
     }
 

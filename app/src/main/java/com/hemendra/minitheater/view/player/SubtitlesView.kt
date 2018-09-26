@@ -35,6 +35,15 @@ class SubtitlesView: TextView, Runnable {
         loadItems()
     }
 
+    private var delayMS: Long = 0
+    fun increaseDelayMS() {
+        delayMS += 100
+    }
+    fun decreaseDelayMS() {
+        delayMS -= 100
+    }
+    fun getDelayMS() = delayMS
+
     private fun loadItems() {
         try {
             items.clear()
@@ -94,7 +103,7 @@ class SubtitlesView: TextView, Runnable {
 
     override fun run() {
         mediaPlayer?.let {
-            val text = getTimedText(it.currentPosition.toLong())
+            val text = getTimedText(it.currentPosition.toLong() + delayMS)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 setText(Html.fromHtml(text, 0))
             } else {

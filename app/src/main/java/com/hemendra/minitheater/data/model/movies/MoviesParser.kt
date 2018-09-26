@@ -8,6 +8,7 @@ import com.hemendra.minitheater.data.Torrent
 import org.json.JSONException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.util.*
 
 class MoviesParser {
 
@@ -66,6 +67,49 @@ class MoviesParser {
             return movies
         }
 
+        /**
+         * This section is just for generating the dummy sreenshots [ copyrights ;) ]
+         */
+        /*val dummyTitles = ArrayList<String>()
+        init {
+            dummyTitles.add("Awesome Movie")
+            dummyTitles.add("The Best Movie")
+            dummyTitles.add("Great Movie")
+            dummyTitles.add("Amazing Movie")
+            dummyTitles.add("Fantastic Movie")
+            dummyTitles.add("The Good One")
+            dummyTitles.add("The Bad One")
+        }
+
+        val dummyDescriptions = ArrayList<String>()
+        init {
+            dummyDescriptions.add("""Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                |Praesent interdum blandit purus, viverra porttitor neque imperdiet a.
+                |Cras ut elit lacus. Morbi ut dictum libero, eget pulvinar libero.""".trimMargin())
+            dummyDescriptions.add("""Nullam viverra neque ullamcorper urna viverra rhoncus.
+                |Pellentesque pretium tortor dolor, et fringilla nibh sollicitudin in.
+                |Sed eu rutrum quam, in rhoncus ipsum. Pellentesque pulvinar urna in urna
+                |pharetra, ac egestas felis cursus.""".trimMargin())
+            dummyDescriptions.add("""Ut consequat urna a leo lacinia, ut fringilla nisi mattis.
+                |Nunc feugiat commodo tellus, vitae tempus diam imperdiet vitae. Vestibulum ante
+                |ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae;
+                |Praesent eget nisi in arcu eleifend ullamcorper vitae nec arcu.""".trimMargin())
+            dummyDescriptions.add("""Aliquam dui justo, dictum ut elementum eget, interdum vitae
+                |justo. Vivamus commodo erat sed vestibulum iaculis. Nunc risus ante, facilisis
+                |in dictum eu, laoreet ut urna.""".trimMargin())
+            dummyDescriptions.add("""Integer pretium dolor sit amet enim rutrum sollicitudin.
+                |Aenean mollis non nisl sed posuere. Aenean tempus, lectus id finibus egestas,
+                |nulla dui sollicitudin est, sit amet auctor lorem tortor ac justo.""".trimMargin())
+            dummyDescriptions.add("""Pellentesque habitant morbi tristique senectus et netus et
+                |malesuada fames ac turpis egestas. Morbi ultricies est condimentum justo
+                |hendrerit dapibus.""".trimMargin())
+            dummyDescriptions.add("""Suspendisse eu dictum lacus. In justo turpis, tempor id
+                |lacus non, tincidunt fringilla justo. Pellentesque sollicitudin, ante ut
+                |pharetra tincidunt, nisi est mattis est, ac volutpat enim libero sit
+                |amet magna.""".trimMargin())
+        }
+        private var tempIndex = 0*/
+
         private fun parseMovie(reader: JsonReader): Movie {
             val movie = Movie()
             reader.beginObject()
@@ -121,6 +165,15 @@ class MoviesParser {
                 }
             }
             reader.endObject()
+
+            /**
+             * This section is just for generating the dummy sreenshots [ copyrights ;) ]
+             */
+            /*movie.title = dummyTitles[tempIndex]
+            movie.description_full = dummyDescriptions[tempIndex]
+            tempIndex++
+            if(tempIndex >= 7) tempIndex = 0*/
+
             return movie
         }
 
