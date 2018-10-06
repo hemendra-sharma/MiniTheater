@@ -20,7 +20,7 @@ class DownloadPool {
 
     private fun fitIntoFreeSlot(loader: ImageLoader): Boolean {
         for(i in 0 until downloadingSlots.size) {
-            if(downloadingSlots[i] == null || downloadingSlots[i]?.isExecuting != true) {
+            if(downloadingSlots[i] == null || downloadingSlots[i]?.isExecuting() != true) {
                 downloadingSlots[i] = loader
                 loader.execute()
                 return true

@@ -52,6 +52,9 @@ class Movie: Serializable {
 
     var watchingProgress: Int = 0
 
+    var isStreaming = false
+    var streamingURL = ""
+
     fun clone(): Movie {
         val movie = Movie()
 
@@ -98,6 +101,9 @@ class Movie: Serializable {
         movie.movieObjectType = movieObjectType
 
         movie.watchingProgress = watchingProgress
+
+        movie.isStreaming = isStreaming
+        movie.streamingURL = streamingURL
 
         return movie
     }

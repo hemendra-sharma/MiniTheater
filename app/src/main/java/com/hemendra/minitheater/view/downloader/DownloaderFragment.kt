@@ -4,20 +4,22 @@ import android.content.Intent
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v4.content.FileProvider
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.presenter.DownloadFailureReason
 import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.presenter.ImagesPresenter
+import com.hemendra.minitheater.service.StreamingService
 import com.hemendra.minitheater.view.listeners.OnDownloadItemClickListener
 import com.hemendra.minitheater.view.listeners.OnMovieDownloadClickListener
 import com.hemendra.minitheater.view.showMessage
 import com.hemendra.minitheater.view.showYesNoMessage
 import kotlinx.android.synthetic.main.fragment_downloader.*
+
 
 class DownloaderFragment: Fragment() {
 
@@ -46,6 +48,7 @@ class DownloaderFragment: Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         context?.let {
             DownloadsPresenter.getInstance().checkAndStartOngoingDownload(it)
+            DownloadsPresenter.getInstance().checkAndStartOngoingStream(it)
         }
         loadFreshList()
         movieToAdd?.let {
@@ -109,7 +112,13 @@ class DownloaderFragment: Fragment() {
             // play movie in video player
             val file = downloadsPresenter.getTorrentFile(movie.torrents[0])
             if(file != null && !file.absolutePath.endsWith(".mp4")) {
-                onExternalClicked(movie)
+                context?.let {
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    val uri = FileProvider.getUriForFile(it, it.packageName + ".provider", file)
+                    intent.setDataAndType(uri, "video/*")
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    startActivity(intent)
+                }
             } else {
                 context?.let {
                     onMovieDownloadClickListener?.onPlayClicked(movie)
@@ -158,25 +167,42 @@ class DownloaderFragment: Fragment() {
         }
 
         override fun onExternalClicked(movie: Movie) {
+            if(movie.isStreaming) {
+                movie.isStreaming = false
+                downloadsPresenter.updateMovie(movie)
+                context?.stopService(Intent(context, StreamingService::class.java))
+                return
+            }
+
+            if(movie.downloadProgress < 1f) {
+                context?.let {
+                    showMessage(it,
+                            "Download the complete movie to stream it.")
+                }
+                return
+            }
+
             val file = downloadsPresenter.getTorrentFile(movie.torrents[0])
             if(file != null) {
-                val tenMB = 10L * 1024L * 1024L
-                if (file.length() > tenMB) {
+                if(!StreamingService.isRunning) {
                     context?.let {
-                        val intent = Intent(Intent.ACTION_VIEW)
-                        val uri = FileProvider.getUriForFile(it, it.packageName + ".provider", file)
-                        intent.setDataAndType(uri, "video/*")
-                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        startActivity(intent)
+                        val intent = Intent(context, StreamingService::class.java)
+                        intent.putExtra(StreamingService.EXTRA_MOVIE, movie)
+                        val ret = it.startService(intent)
+                        if(ret != null)
+                            Toast.makeText(it, "Streaming Started", Toast.LENGTH_SHORT).show()
+                        movie.isStreaming = true
+                        downloadsPresenter.updateMovie(movie)
                     }
                 } else {
                     context?.let {
-                        showMessage(it, "No data to play! Download at least 10 MB to start playing")
+                        showMessage(it, "Already Streaming a Movie")
                     }
                 }
             } else {
                 context?.let {
-                    showMessage(it, "No data to play! Download at least 10 MB to start playing")
+                    showMessage(it,
+                            "No data to stream! Looks like the movie file is missing or moved.")
                 }
             }
         }

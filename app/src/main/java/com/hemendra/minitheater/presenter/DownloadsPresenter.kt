@@ -8,6 +8,7 @@ import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.Torrent
 import com.hemendra.minitheater.presenter.listeners.IDownloadsPresenter
 import com.hemendra.minitheater.service.DownloaderService
+import com.hemendra.minitheater.service.StreamingService
 import com.hemendra.minitheater.utils.Utils
 import java.io.File
 
@@ -38,6 +39,19 @@ class DownloadsPresenter private constructor():
             for(movie in it.movies) {
                 if(movie.isDownloading) {
                     startDownload(context, movie, false)
+                    break
+                }
+            }
+        }
+    }
+
+    override fun checkAndStartOngoingStream(context: Context) {
+        downloadsList?.let {
+            for(movie in it.movies) {
+                if(movie.isStreaming) {
+                    val intent = Intent(context, StreamingService::class.java)
+                    intent.putExtra(DownloaderService.EXTRA_MOVIE, movie)
+                    context.startService(intent)
                     break
                 }
             }

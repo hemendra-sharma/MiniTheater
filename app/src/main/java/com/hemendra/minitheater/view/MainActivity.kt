@@ -2,7 +2,6 @@ package com.hemendra.minitheater.view
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
@@ -13,6 +12,7 @@ import android.widget.Toast
 import com.hemendra.minitheater.BuildConfig
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
+import com.hemendra.minitheater.data.MovieObjectType
 import com.hemendra.minitheater.presenter.ImagesPresenter
 import com.hemendra.minitheater.utils.RemoteConfig
 import com.hemendra.minitheater.view.downloader.DownloaderFragment
@@ -20,9 +20,11 @@ import com.hemendra.minitheater.view.explorer.ExplorerFragment
 import com.hemendra.minitheater.view.listeners.OnMovieDownloadClickListener
 import com.hemendra.minitheater.view.listeners.OnMovieItemClickListener
 import com.hemendra.minitheater.view.explorer.DetailsFragment
+import com.hemendra.minitheater.view.listeners.OnStreamItemClickListener
 import com.hemendra.minitheater.view.listeners.OtherSearchListener
 import com.hemendra.minitheater.view.more.FindMoreFragment
 import com.hemendra.minitheater.view.player.PlayerActivity
+import com.hemendra.minitheater.view.streams.StreamsFragment
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -31,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private val detailsFragment: DetailsFragment = DetailsFragment()
     private val downloaderFragment: DownloaderFragment = DownloaderFragment()
     private val findMoreFragment: FindMoreFragment = FindMoreFragment()
+    private val streamsFragment: StreamsFragment = StreamsFragment()
 
     private var runtimePermissionManager: RuntimePermissionManager? = null
 
@@ -39,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         private const val DETAILS_FRAGMENT_TAG = "details"
         private const val FIND_MORE_FRAGMENT_TAG = "find_more"
         private const val DOWNLOADS_FRAGMENT_TAG = "downloads"
+        private const val STREAMS_FRAGMENT_TAG = "streams"
     }
 
     private var movieToAddToDownloads: Movie? = null
@@ -182,6 +186,12 @@ class MainActivity : AppCompatActivity() {
                 }
                 return@OnNavigationItemSelectedListener true
             }
+            R.id.navigation_streams -> {
+                if(currentFragmentTag() != STREAMS_FRAGMENT_TAG) {
+                    showStreamsFragment()
+                }
+                return@OnNavigationItemSelectedListener true
+            }
         }
         false
     }
@@ -202,6 +212,8 @@ class MainActivity : AppCompatActivity() {
             selectNavigationItem(R.id.navigation_downloads)
         } else if(current == FIND_MORE_FRAGMENT_TAG) {
             selectNavigationItem(R.id.navigation_search)
+        } else if(current == STREAMS_FRAGMENT_TAG) {
+            selectNavigationItem(R.id.navigation_streams)
         }
     }
 
@@ -234,16 +246,32 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onPlayClicked(movie: Movie) {
-            navigation.selectedItemId = R.id.navigation_downloads
             showPlayerActivity(movie)
         }
 
+    }
+
+    private val onStreamItemClickListener = object : OnStreamItemClickListener {
+        override fun onItemClick(movie: Movie) {
+            if(movie.movieObjectType == MovieObjectType.EXTRA) {
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.setDataAndType(Uri.parse(movie.streamingURL), "video/*")
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                startActivity(intent)
+            } else {
+                val intent = Intent(applicationContext, PlayerActivity::class.java)
+                intent.putExtra("movie", movie)
+                startActivity(intent)
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         if(currentFragmentTag() == DOWNLOADS_FRAGMENT_TAG) {
             downloaderFragment.loadFreshList()
+        } else if(currentFragmentTag() == STREAMS_FRAGMENT_TAG) {
+            streamsFragment.loadFreshList()
         }
     }
 
@@ -309,6 +337,14 @@ class MainActivity : AppCompatActivity() {
         transaction.commitAllowingStateLoss()
     }
 
+    private fun showStreamsFragment() {
+        val transaction = supportFragmentManager.beginTransaction()
+        streamsFragment.setMovieClickListener(onStreamItemClickListener)
+        transaction.replace(R.id.place_holder, streamsFragment, STREAMS_FRAGMENT_TAG)
+        transaction.addToBackStack(STREAMS_FRAGMENT_TAG)
+        transaction.commitAllowingStateLoss()
+    }
+
     private fun showPlayerActivity(movie: Movie) {
         val intent = Intent(applicationContext, PlayerActivity::class.java)
         intent.putExtra("movie", movie)
@@ -321,6 +357,7 @@ class MainActivity : AppCompatActivity() {
         detailsFragment.destroy()
         findMoreFragment.destroy()
         downloaderFragment.destroy()
+        streamsFragment.destroy()
         super.onDestroy()
     }
 

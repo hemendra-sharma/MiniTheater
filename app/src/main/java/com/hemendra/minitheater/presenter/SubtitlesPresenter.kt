@@ -18,14 +18,14 @@ class SubtitlesPresenter private constructor(): ISubtitlesPresenter {
     private var subtitleDownloader: SubtitleDownloader? = null
 
     override fun getSubtitlesList(movie: Movie, listener: SubtitlesListDownloadListener) {
-        if(subtitlesListDownloader != null && subtitlesListDownloader?.isExecuting == true)
+        if(subtitlesListDownloader != null && subtitlesListDownloader?.isExecuting() == true)
             return
         subtitlesListDownloader = SubtitlesListDownloader(listener)
         subtitlesListDownloader?.execute(movie)
     }
 
     override fun getSubtitle(path: String, listener: SubtitleDownloadListener) {
-        if(subtitleDownloader != null && subtitleDownloader?.isExecuting == true)
+        if(subtitleDownloader != null && subtitleDownloader?.isExecuting() == true)
             subtitleDownloader?.cancel(true)
 
         subtitleDownloader = SubtitleDownloader(listener)

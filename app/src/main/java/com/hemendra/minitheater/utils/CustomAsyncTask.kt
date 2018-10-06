@@ -45,7 +45,7 @@ abstract class CustomAsyncTask<Params, Progress, Result> : Handler.Callback {
      * Check whether the task execution is going on, or not.
      * @return TRUE if in progress, FALSE otherwise.
      */
-    val isExecuting: Boolean = !isFinished
+    fun isExecuting(): Boolean = !isFinished
 
     override fun handleMessage(msg: Message?): Boolean {
         msg?.let {

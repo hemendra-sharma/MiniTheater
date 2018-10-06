@@ -16,4 +16,9 @@
         android:icon="@drawable/ic_file_download_black_24dp"
         android:title="@string/downloads"/>
 
+    <item
+        android:id="@+id/navigation_streams"
+        android:icon="@drawable/ic_streaming_black_40dp"
+        android:title="@string/streams"/>
+
 </menu>

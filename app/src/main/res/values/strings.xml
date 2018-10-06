@@ -49,4 +49,6 @@
     <string name="subtitles_delay">Subtitles Delay</string>
     <string name="lock">Lock</string>
     <string name="hint">Hint</string>
+    <string name="audio_tracks">Audio Tracks</string>
+    <string name="streams">Streams</string>
 </resources>

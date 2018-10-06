@@ -9,6 +9,7 @@ import java.io.File
 interface IDownloadsPresenter {
 
     fun checkAndStartOngoingDownload(context: Context)
+    fun checkAndStartOngoingStream(context: Context)
     fun addDownload(movie: Movie): DownloadFailureReason
     fun removeDownload(movie: Movie): Boolean
     fun getDownloadsList(): ArrayList<Movie>

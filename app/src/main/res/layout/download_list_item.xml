@@ -48,7 +48,8 @@
             android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"
             android:contentDescription="@string/play"
-            android:src="@drawable/ic_airplay_black_30dp"/>
+            android:src="@drawable/ic_streaming_black_40dp"
+            android:visibility="gone"/>
 
         <TextView
             android:id="@+id/tvTitle"

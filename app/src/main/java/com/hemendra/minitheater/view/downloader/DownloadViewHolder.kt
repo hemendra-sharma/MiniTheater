@@ -15,11 +15,12 @@ import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.presenter.DownloadsPresenter
 import com.hemendra.minitheater.presenter.ImagesPresenter
 import com.hemendra.minitheater.service.DownloaderService
+import com.hemendra.minitheater.service.StreamingService
 import com.hemendra.minitheater.view.listeners.ImageLoaderCallback
 import com.hemendra.minitheater.view.listeners.OnDownloadItemClickListener
 import java.util.*
 
-class DownloadViewHolder(private var view: View, private val listener: OnDownloadItemClickListener,
+class DownloadViewHolder(private val view: View, private val listener: OnDownloadItemClickListener,
                          private val imagesPresenter: ImagesPresenter):
         RecyclerView.ViewHolder(view), ImageLoaderCallback {
 
@@ -132,6 +133,16 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
                 ivPause.visibility = View.GONE // download complete
             }
         }
+
+        if(m.downloadProgress >= 1f || m.isStreaming)
+            ivExternalVideo.visibility = View.VISIBLE
+        else
+            ivExternalVideo.visibility = View.GONE
+
+        if(m.isStreaming)
+            ivExternalVideo.setImageResource(R.drawable.ic_stop_black_30dp)
+        else
+            ivExternalVideo.setImageResource(R.drawable.ic_streaming_black_40dp)
     }
 
     override fun onImageLoaded(url: String, image: Bitmap) {
@@ -148,6 +159,8 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         filter.addAction(DownloaderService.ACTION_DOWNLOAD_PAUSED)
         filter.addAction(DownloaderService.ACTION_DOWNLOAD_RESUMED)
         filter.addAction(DownloaderService.ACTION_DOWNLOAD_STOPPED)
+        filter.addAction(StreamingService.ACTION_STREAM_STARTED)
+        filter.addAction(StreamingService.ACTION_STREAM_STOPPED)
         mgr.registerReceiver(downloadReceiver, filter)
     }
 
@@ -169,6 +182,13 @@ class DownloadViewHolder(private var view: View, private val listener: OnDownloa
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
                 val mv = it.getSerializableExtra(DownloaderService.EXTRA_MOVIE) as Movie?
+                if(it.action == StreamingService.ACTION_STREAM_STARTED) {
+                    mv?.isStreaming = true
+                    saveProgress()
+                } else if(it.action == StreamingService.ACTION_STREAM_STOPPED) {
+                    mv?.isStreaming = false
+                    saveProgress()
+                }
                 mv?.let { m -> if(m.id == movie?.id) updateProgress(m) }
             }
         }

@@ -33,6 +33,7 @@ import com.masterwok.simpletorrentandroid.models.TorrentSessionStatus
 import java.io.File
 import java.util.*
 import android.media.RingtoneManager
+import android.support.v4.app.NotificationManagerCompat
 import com.frostwire.jlibtorrent.TorrentInfo
 
 
@@ -47,7 +48,6 @@ class DownloaderService: Service(), TorrentSessionListener {
         private const val FINISHED_NOTIFICATION_ID = 2002
         private const val PAUSE_ACTION = 1002
         private const val STOP_ACTION = 1003
-        private const val OK_ACTION = 1004
         private const val NOTIFICATION_CHANNEL_ID = "MovieDownloads"
 
         const val ACTION_STOP_DOWNLOAD = "com.hemendra.minitheater.ACTION_STOP_DOWNLOAD"
@@ -101,9 +101,9 @@ class DownloaderService: Service(), TorrentSessionListener {
                 } else if(!pauseTorrentSession()) {
                     stopSelf()
                 }
-                return START_STICKY
+                return START_NOT_STICKY
             } else if(act == "Stop") {
-                notificationManager?.cancel(NOTIFICATION_ID)
+                NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
                 stopSelf()
             }
             return START_NOT_STICKY
@@ -121,14 +121,13 @@ class DownloaderService: Service(), TorrentSessionListener {
 
         movie = intent?.getSerializableExtra(EXTRA_MOVIE) as Movie?
 
-        return if(startTorrentSession()) {
+        if(startTorrentSession()) {
             startForeground(NOTIFICATION_ID, getNotification())
-            START_STICKY
         } else {
             stopSelf()
             onDownloadFailed(TorrentFailureReason.NOTHING_TO_DOWNLOAD)
-            START_NOT_STICKY
         }
+        return START_NOT_STICKY
     }
 
     private fun startTorrentSession(): Boolean {
@@ -392,7 +391,9 @@ class DownloaderService: Service(), TorrentSessionListener {
                         "%.2f%%, %d Seeds, D: %.2f KB/s, U: %.2f KB/s",
                         progress * 100f, seeds, (speed.toFloat()/1024), (upSpeed.toFloat()/1024))
                 notificationView?.setTextViewText(R.id.tvInfo, str)
-                notificationManager?.notify(NOTIFICATION_ID, builder?.build())
+                builder?.build()?.let {
+                    NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, it)
+                }
             }
         }
     }
@@ -402,7 +403,9 @@ class DownloaderService: Service(), TorrentSessionListener {
         val str = String.format(Locale.getDefault(),
                 "Downloaded %.2f%% (Paused)", (progress * 100f))
         notificationView?.setTextViewText(R.id.tvInfo, str)
-        notificationManager?.notify(NOTIFICATION_ID, builder?.build())
+        builder?.build()?.let {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, it)
+        }
 
         movie?.let { m ->
             val intent = Intent(ACTION_DOWNLOAD_PAUSED)
@@ -423,7 +426,9 @@ class DownloaderService: Service(), TorrentSessionListener {
                 progress * 100f, seeds, (speed.toFloat()/1024), (upSpeed.toFloat()/1024))
 
         notificationView?.setTextViewText(R.id.tvInfo, str)
-        notificationManager?.notify(NOTIFICATION_ID, builder?.build())
+        builder?.build()?.let {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, it)
+        }
 
         movie?.let { m ->
             val intent = Intent(ACTION_DOWNLOAD_RESUMED)
@@ -436,7 +441,9 @@ class DownloaderService: Service(), TorrentSessionListener {
 
     private fun showErrorNotification() {
         notificationView?.setTextViewText(R.id.tvInfo, "Failed to Download")
-        notificationManager?.notify(NOTIFICATION_ID, builder?.build())
+        builder?.build()?.let {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, it)
+        }
     }
 
     private fun showFinishedNotification() {
@@ -447,7 +454,9 @@ class DownloaderService: Service(), TorrentSessionListener {
         builder?.setTicker("Download Complete")
         val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         builder?.setSound(uri, AudioManager.STREAM_NOTIFICATION)
-        notificationManager?.notify(FINISHED_NOTIFICATION_ID, builder?.build())
+        builder?.build()?.let {
+            NotificationManagerCompat.from(this).notify(FINISHED_NOTIFICATION_ID, it)
+        }
     }
 
     override fun onAddTorrent(torrentHandle: TorrentHandle,
@@ -479,6 +488,8 @@ class DownloaderService: Service(), TorrentSessionListener {
     override fun onPieceFinished(torrentHandle: TorrentHandle,
                                  torrentSessionStatus: TorrentSessionStatus) {
         Log.d("service", "onPieceFinished")
+        if(torrentSessionStatus.state == TorrentStatus.State.CHECKING_FILES) return
+
         val bencode = torrentHandle.torrentFile().bencode()
         bencode?.let {
             movie?.let { m ->

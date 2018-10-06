@@ -3,6 +3,7 @@ package com.hemendra.minitheater.view.player
 import android.annotation.SuppressLint
 import android.content.*
 import android.content.res.Configuration
+import android.graphics.Color
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
@@ -13,11 +14,9 @@ import android.provider.Settings
 import android.support.v4.content.LocalBroadcastManager
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import android.util.TypedValue
 import android.view.*
-import android.widget.AdapterView
-import android.widget.LinearLayout
-import android.widget.MediaController
-import android.widget.Toast
+import android.widget.*
 import com.hemendra.minitheater.R
 import com.hemendra.minitheater.data.Movie
 import com.hemendra.minitheater.data.MovieObjectType
@@ -33,6 +32,7 @@ import kotlinx.android.synthetic.main.activity_player.*
 import java.io.File
 import java.io.IOException
 import java.util.*
+import kotlin.collections.ArrayList
 
 class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         MediaPlayer.OnBufferingUpdateListener, MediaPlayer.OnCompletionListener,
@@ -59,6 +59,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
     private var screenWidth: Int = 0
     private var screenHeight: Int = 0
     private var controlsLocked = false
+    private val audioTracks = HashMap<MediaPlayer.TrackInfo, Int>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -117,6 +118,17 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         }
     }
 
+    private var firstBackPressedAt = 0L
+
+    override fun onBackPressed() {
+        if(System.currentTimeMillis() - firstBackPressedAt < 2000)
+            super.onBackPressed()
+        else {
+            firstBackPressedAt = System.currentTimeMillis()
+            Toast.makeText(this, "Press Back Again to Exit !", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun setupSubtitlesView() {
         if(movie?.movieObjectType == MovieObjectType.EXTRA) {
             ivSubtitles.visibility = View.GONE
@@ -132,6 +144,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                     mediaController?.hide()
                     tvDownloadInfo.visibility = View.GONE
                     ivLock.visibility = View.GONE
+                    ivAudioTracks.visibility = View.GONE
                     if (pbSubtitles.visibility == View.VISIBLE) {
                         movie?.let {
                             SubtitlesPresenter.getInstance().getSubtitlesList(it,
@@ -253,6 +266,9 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                 llSubtitlesDelay.visibility = View.GONE
                 tvDownloadInfo.visibility = View.GONE
                 ivLock.visibility = View.GONE
+                ivAudioTracks.visibility = View.GONE
+                rlSubtitles.visibility = View.GONE
+                svAudioTracks.visibility = View.GONE
             } else {
                 ivLock.setImageResource(R.drawable.ic_lock_open_black_24dp)
                 showSystemUI()
@@ -263,6 +279,8 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                 }
                 tvDownloadInfo.visibility = View.VISIBLE
                 ivLock.visibility = View.VISIBLE
+                if(audioTracks.size > 1)
+                    ivAudioTracks.visibility = View.VISIBLE
             }
         }
     }
@@ -286,7 +304,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
     private fun setupGestures() {
         clickDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapUp(e: MotionEvent): Boolean {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
                 if(controlsLocked) {
                     if(ivLock.visibility == View.VISIBLE)
                         ivLock.visibility = View.GONE
@@ -300,6 +318,7 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                         llSubtitlesDelay.visibility = View.GONE
                         tvDownloadInfo.visibility = View.GONE
                         ivLock.visibility = View.GONE
+                        ivAudioTracks.visibility = View.GONE
                     } else {
                         showSystemUI()
                         mediaController?.show(0)
@@ -309,8 +328,11 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                         }
                         tvDownloadInfo.visibility = View.VISIBLE
                         ivLock.visibility = View.VISIBLE
+                        if(audioTracks.size > 1)
+                            ivAudioTracks.visibility = View.VISIBLE
                     }
                     rlSubtitles.visibility = View.GONE
+                    svAudioTracks.visibility = View.GONE
                 }
                 return true
             }
@@ -377,6 +399,23 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
                     }
                 }
                 return false
+            }
+
+            private var pausedByLongPress = false
+
+            override fun onLongPress(e: MotionEvent?) {
+                if(mediaPlayer?.isPlaying == true) {
+                    mediaPlayer?.pause()
+                    pausedByLongPress = true
+                }
+            }
+
+            override fun onSingleTapUp(e: MotionEvent?): Boolean {
+                return if(pausedByLongPress) {
+                    pausedByLongPress = false
+                    mediaPlayer?.start()
+                    true
+                } else false
             }
         })
     }
@@ -507,36 +546,50 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         }
 
         movie?.let {
-            movieFile = DownloadsPresenter.getInstance().getTorrentFile(it.torrents[0])
-            if(movieFile == null) {
-                Log.d(TAG, "file not created yet")
-                rlProgress.visibility = View.VISIBLE
-                handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
-                return
-            }
-
-            movieFile?.let { file ->
-                val tenMB = 10L * 1024L * 1024L
-                if(file.length() < tenMB) {
-                    Log.d(TAG, "file length is small: ${file.length() / 1024f / 1024f} MB")
-                    rlProgress.visibility = View.VISIBLE
-                    handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
-                    return
-                } else {
-                    rlProgress.visibility = View.GONE
-                }
-
+            if(it.streamingURL.isNotEmpty()) {
                 mediaPlayer = MediaPlayer()
                 try {
-                    mediaPlayer?.setDataSource(file.absolutePath)
+                    mediaPlayer?.setDataSource(it.streamingURL)
                 } catch (e: IOException) {
                     e.printStackTrace()
                     mediaPlayer = null
                     destroyMediaPlayerAndStopServer()
+                    onBackPressed()
+                    Toast.makeText(this, "An Error Occurred !", Toast.LENGTH_SHORT).show()
+                    return
+                }
+            } else {
+                movieFile = DownloadsPresenter.getInstance().getTorrentFile(it.torrents[0])
+                if (movieFile == null) {
+                    Log.d(TAG, "file not created yet")
+                    rlProgress.visibility = View.VISIBLE
                     handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
                     return
                 }
-            } ?: return
+
+                movieFile?.let { file ->
+                    val tenMB = 10L * 1024L * 1024L
+                    if (file.length() < tenMB) {
+                        Log.d(TAG, "file length is small: ${file.length() / 1024f / 1024f} MB")
+                        rlProgress.visibility = View.VISIBLE
+                        handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
+                        return
+                    } else {
+                        rlProgress.visibility = View.GONE
+                    }
+
+                    mediaPlayer = MediaPlayer()
+                    try {
+                        mediaPlayer?.setDataSource(file.absolutePath)
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                        mediaPlayer = null
+                        destroyMediaPlayerAndStopServer()
+                        handler.postDelayed({ startMediaPlayerAndServer() }, 1000)
+                        return
+                    }
+                } ?: return
+            }
         } ?: return
         mediaPlayer?.setDisplay(surfaceView.holder)
         mediaPlayer?.setVolume(1f, 1f)
@@ -614,15 +667,32 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
         return false
     }
 
-    override fun onBufferingUpdate(mp: MediaPlayer?, percent: Int) {
+    override fun onBufferingUpdate(mp: MediaPlayer?, percent: Int) {}
 
-    }
-
-    override fun onCompletion(mp: MediaPlayer?) {
-    }
+    override fun onCompletion(mp: MediaPlayer?) {}
 
     override fun onPrepared(mp: MediaPlayer?) {
         isVideoReadyToBePlayed = true
+
+        audioTracks.clear()
+        mediaPlayer?.trackInfo?.let {
+            for(i in 0 until it.size) {
+                if(it[i].trackType == MediaPlayer.TrackInfo.MEDIA_TRACK_TYPE_AUDIO)
+                    audioTracks[it[i]] = i
+            }
+        }
+        if(audioTracks.size > 1) {
+            if(mediaController?.isShowing == true)
+                ivAudioTracks.visibility = View.VISIBLE
+            mediaPlayer?.selectTrack(audioTracks.values.elementAt(0))
+            fillAudioTrackViews()
+            ivAudioTracks.setOnClickListener {
+                if(svAudioTracks.visibility == View.VISIBLE)
+                    svAudioTracks.visibility = View.GONE
+                else
+                    svAudioTracks.visibility = View.VISIBLE
+            }
+        }
 
         adjustSurfaceSize()
         mediaPlayer?.start()
@@ -637,6 +707,29 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
 
         if(positionBeforePaused > 0)
             mediaPlayer?.seekTo(positionBeforePaused)
+    }
+
+    private fun fillAudioTrackViews() {
+        llAudioTracks.removeAllViews()
+        val params = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT)
+        for(trackInfo in audioTracks.keys) {
+            val tv = TextView(this)
+            tv.layoutParams = params
+            tv.text = trackInfo.language
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            tv.setTextColor(Color.WHITE)
+            tv.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            tv.setPadding(5, 10, 5, 10)
+            tv.tag = audioTracks[trackInfo]
+            tv.setOnClickListener(onAudioTrackClicked)
+            llAudioTracks.addView(tv)
+        }
+    }
+
+    private val onAudioTrackClicked = View.OnClickListener { v ->
+        mediaPlayer?.selectTrack(v.tag as Int)
+        svAudioTracks.visibility = View.GONE
     }
 
     override fun onConfigurationChanged(newConfig: Configuration?) {
@@ -703,9 +796,13 @@ class PlayerActivity : AppCompatActivity(), SurfaceHolder.Callback,
     }
 
     override fun getBufferPercentage(): Int {
-        val downloadedSize = (movieFile?.length() ?: 0).toDouble()
-        val expectedSize = (movie?.torrents?.get(0)?.size_bytes ?: 0).toDouble()
-        return ((downloadedSize / expectedSize) * 100f).toInt()
+        return if(movie?.streamingURL?.isNotEmpty() == true) {
+            100
+        } else {
+            val downloadedSize = (movieFile?.length() ?: 0).toDouble()
+            val expectedSize = (movie?.torrents?.get(0)?.size_bytes ?: 0).toDouble()
+            ((downloadedSize / expectedSize) * 100f).toInt()
+        }
     }
 
     private fun maxSeekPosition(): Int {

@@ -5,6 +5,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.Environment
 import java.io.*
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.NetworkInterface
 
 class Utils {
 
@@ -92,7 +95,7 @@ class Utils {
          * @param obj Object to convert into byte array.
          * @return Raw byte array.
          */
-        private fun getSerializedData(obj: Any): ByteArray? {
+         fun getSerializedData(obj: Any): ByteArray? {
             if(obj !is Serializable) return null
 
             val bos = ByteArrayOutputStream()
@@ -198,6 +201,30 @@ class Utils {
         }
 
         fun getAvailableSpace(): Long = Environment.getExternalStorageDirectory().freeSpace
+
+        fun getLocalIpAddress(): String {
+            try {
+                val en = NetworkInterface.getNetworkInterfaces()
+                while (en.hasMoreElements()) {
+                    val intf = en.nextElement()
+                    val enumIpAddr = intf.inetAddresses
+                    while (enumIpAddr.hasMoreElements()) {
+                        val inetAddress = enumIpAddr.nextElement()
+
+                        // for getting IPV4 format
+                        val ipv4 = inetAddress.hostAddress
+                        val address = InetAddress.getByName(ipv4)
+                        if (!inetAddress.isLoopbackAddress && address is Inet4Address) {
+                            return ipv4
+                        }
+                    }
+                }
+            } catch (ex: Throwable) {
+                ex.printStackTrace()
+            }
+
+            return ""
+        }
     }
 
 }
